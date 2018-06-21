@@ -10,12 +10,10 @@ function SimUI(container, color){
 	self.container.appendChild(startButton);
 	startButton.onclick = function(event){
 		publish("sound/button");
-		if(!Simulations.IS_RUNNING){
+		if(!Simulations.inProgress){
 			Simulations.IS_RUNNING = true;
+			Simulations.inProgress = true;
 			publish("sim/start");
-		}else{
-			Simulations.IS_RUNNING = false;
-			publish("sim/stop");
 		}
 	};
 	_stopPropButton(startButton);

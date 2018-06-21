@@ -62,15 +62,6 @@ subscribe("START", function(){
 	// Hide translations, show navigation
 	$("#navigation").style.display = "block";
 
-	// Show Skip Button
-	var skippy = $("#skip");
-	skippy.style.display = "block";
-	skippy.onclick = function(){
-		publish("sound/button");
-		slideshow.next();
-	};
-	_stopPropButton(skippy);
-
 	// Introduction
 	slideshow.next();
 

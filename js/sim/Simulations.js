@@ -12,10 +12,11 @@ function Simulations(){
 	self.dom = $("#simulations");
 
 	self.sims = [];
+	Simulations.inProgress= false;
 
 	// Clear All Sims
 	self.clear = function(){
-		
+
 		Simulations.IS_RUNNING = false;
 		$("#container").removeAttribute("sim_is_running");
 
@@ -24,7 +25,7 @@ function Simulations(){
 			sim.kill();
 		});
 		self.sims = [];
-		
+
 	};
 
 	// Add Sims
@@ -37,20 +38,19 @@ function Simulations(){
 	};
 
 	// Update
+
 	self.update = function(){
 
 		// Running sims... the CLOCK!
-		if(Simulations.IS_RUNNING){
-			if(self.CLOCK==0){
-
+		if(Simulations.inProgress){
+			console.log("yay");
 				// Step all sims!
 				self.sims.forEach(function(sim){
 					sim.nextStep();
 				});
-				self.CLOCK = 30; //25;
-
-			}
-			self.CLOCK--;
+				Simulations.inProgress = false;
+				Simulations.IS_RUNNING = false;
+				//publish("sim/stop");
 		}
 
 		// Update all sims
@@ -76,7 +76,7 @@ function Simulations(){
 
 		Simulations.IS_RUNNING = true;
 		$("#container").setAttribute("sim_is_running",true);
-		
+
 		self.CLOCK = 0;
 		// save for later resetting
 		self.sims.forEach(function(sim){
@@ -85,13 +85,13 @@ function Simulations(){
 
 	});
 	subscribe("sim/stop", function(){
-		
+
 		Simulations.IS_RUNNING = false;
 		$("#container").removeAttribute("sim_is_running");
-		
+
 		// reload the network pre-sim
 		self.sims.forEach(function(sim){
-			sim.reload(); 
+			sim.reload();
 		});
 
 	});
@@ -344,7 +344,7 @@ function Sim(config){
 
 	// Kill
 	self.kill = function(){
-		
+
 		self.clear();
 
 		// key handlers, too
@@ -468,7 +468,7 @@ function Sim(config){
 			if(!self.options.NO_BONK){
 				SOUNDS.bonk.play();
 			}
-			
+
 		}
 
 		// "Infect" the peeps who need to get infected
@@ -520,7 +520,7 @@ function Sim(config){
 	};
 	_keyHandlers.push(subscribe("key/down/space",function(){
 		_resetConnectorCutter();
-		self._startMove();	
+		self._startMove();
 	}));
 	self._startMove = function(){
 		if(!_draggingPeep){ // prevent double-activation
@@ -538,10 +538,10 @@ function Sim(config){
 		}
 	};
 	_keyHandlers.push(subscribe("key/up/space",function(){
-		self._stopMove();	
+		self._stopMove();
 	}));
 	self._stopMove = function(){
-		
+
 		// Sound!
 		SOUNDS.squeak_up.volume(0.6);
 		SOUNDS.squeak_up.play();
@@ -567,7 +567,7 @@ function Sim(config){
 	};
 	_keyHandlers.push(subscribe("key/down/delete",function(){
 		_resetConnectorCutter();
-		self._deletePeep();	
+		self._deletePeep();
 	}));
 	self._deletePeep = function(){
 

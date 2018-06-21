@@ -22,7 +22,7 @@ function Slideshow(){
 	self.boxes = new Boxes();
 	self.simulations = new Simulations();
 	self.scratch = new Scratch();
-	
+
 	// GOTO and NEXT
 	var _delay = 300;
 	self.IS_TRANSITIONING = false;
@@ -31,7 +31,7 @@ function Slideshow(){
 		// Wait for transition to finish!
 		if(self.IS_TRANSITIONING) return;
 		self.IS_TRANSITIONING = true;
-		
+
 		// Which slide?
 		self.slideIndex = index;
 		var isFirstSlide = (self.currentSlide==null);
