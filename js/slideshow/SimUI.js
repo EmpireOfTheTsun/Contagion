@@ -12,26 +12,28 @@ function SimUI(container, color){
 		publish("sound/button");
 		if(!Simulations.inProgress){
 			Simulations.IS_RUNNING = true;
-			Simulations.inProgress = true;
+			Simulations.requestStart = true;
 			publish("sim/start");
 		}
 	};
 	_stopPropButton(startButton);
 
-	// Update button UI
-	var _updateButtonUI = function(){
-		if(!Simulations.IS_RUNNING){
+	//Separating into 2 functions prevents bug that can occur when toggling UI
+	//buttons in simple networks
+	var _unsetButtonUI = function(){
 			startButton.innerHTML = getWords("sim_start");
 			self.container.removeAttribute("active");
-		}else{
-			startButton.innerHTML = getWords("sim_stop");
-			self.container.setAttribute("active",true);
-		}
-	};
-	_updateButtonUI();
+	}
 
-	var _handler1 = subscribe("sim/start",_updateButtonUI);
-	var _handler2 = subscribe("sim/stop",_updateButtonUI);
+	var _setButtonUI = function(){
+		startButton.innerHTML = getWords("sim_stop");
+		self.container.setAttribute("active",true);
+	}
+
+	_unsetButtonUI();
+
+	var _handler1 = subscribe("sim/start",_setButtonUI);
+	var _handler2 = subscribe("sim/round_over",_unsetButtonUI);
 	self.container.kill = function(){
 		unsubscribe(_handler1);
 		unsubscribe(_handler2);

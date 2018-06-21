@@ -37,20 +37,37 @@ function Simulations(){
 		self.sims.push(sim);
 	};
 
-	// Update
+	self.endRound = function(){
+		Simulations.IS_RUNNING = false;
+		console.log("done");
+		publish("sim/round_over");
+		Simulations.inProgress = false;
+	}
 
-	self.update = function(){
-
-		// Running sims... the CLOCK!
-		if(Simulations.inProgress){
-			console.log("yay");
-				// Step all sims!
-				self.sims.forEach(function(sim){
+	self.beginRound = function(){
+		Simulations.requestStart = false;
+		Simulations.inProgress = true;
+		console.log("start");
+		var remainingSims = self.sims.length;
+			// Step all sims!
+			self.sims.forEach(function(sim){
+				setTimeout(function(){
 					sim.nextStep();
-				});
-				Simulations.inProgress = false;
-				Simulations.IS_RUNNING = false;
-				//publish("sim/stop");
+					remainingSims--;
+					console.log("step"+remainingSims);
+					if (remainingSims == 0){
+						setTimeout(function(){
+							self.endRound();
+						},500);
+					}
+				},333);
+			});
+	}
+
+	// Update
+	self.update = function(){
+		if(Simulations.requestStart){
+			self.beginRound();
 		}
 
 		// Update all sims

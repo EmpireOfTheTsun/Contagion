@@ -12,8 +12,8 @@ SLIDES.push(
 			fullscreen: true,
 			network: {
 				"contagion":0.42,
-				"peeps":[[506,195,1],[621,270,0],[724,194,0]],
-				"connections":[[0,1,0],[1,2,0]]
+				"peeps":[[500,200,0],[500,350,0],[650,450,0],[800,350,0],[800,200,0],[650,100,0],[650,275,1]],
+				"connections":[[0,1,1],[1,2,1],[2,3,1],[3,4,1],[4,5,1],[5,0,1]]
 			},
 		},
 
@@ -35,8 +35,8 @@ SLIDES.push(
 		{
 			type:"box",
 			text:"sandbox_caption",
-			x:660, y:500, w:300, h:40,
-			align:"right"
+			x:660, y:0, w:300, h:40,
+			align:"center"
 		}
 
 

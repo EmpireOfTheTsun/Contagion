@@ -3,6 +3,8 @@ function ConnectorCutter(config){
 	var self = this;
 	self.config = config;
 	self.sim = config.sim;
+	self.CONNECTIONS_REMAINING = 3;
+
 
 	// Connecting/Cutting
 	self.connectFrom = null;
@@ -15,6 +17,8 @@ function ConnectorCutter(config){
 	var _SNIP = function(){
 		_SNIP_SOUND = (_SNIP_SOUND+1)%3;
 		SOUNDS["snip"+_SNIP_SOUND].play();
+		self.CONNECTIONS_REMAINING++;
+		console.log(self.CONNECTIONS_REMAINING);
 	};
 	var _PLUCK_SOUND_INDEX = 0;
 	var _PLUCK_SOUND = [0,1,2,3,2,1];
@@ -55,7 +59,7 @@ function ConnectorCutter(config){
 
 				// JUST CLICKED, and state=0... can either start connecting or cutting!
 				if(mouse.justPressed && self.state===0){
-					
+
 					// Clicked on a peep?
 					var peepClicked = self.sim.getHoveredPeep(20);
 					if(peepClicked){
@@ -78,21 +82,28 @@ function ConnectorCutter(config){
 
 					// End connect?
 					if(self.state==1){
-						var peepReleased = self.sim.getHoveredPeep(20);
-						if(peepReleased){
-							var successfulConnection = self.sim.addConnection(self.connectFrom, peepReleased);
-
-							// SOUND!
-							if(successfulConnection){
-								SOUNDS.pencil.volume(0.37);
-								SOUNDS.pencil.play();
+						if (self.CONNECTIONS_REMAINING > 0){
+							var peepReleased = self.sim.getHoveredPeep(20);
+							if(peepReleased){
+								var successfulConnection = self.sim.addConnection(self.connectFrom, peepReleased);
+								// SOUND!
+								if(successfulConnection){
+									SOUNDS.pencil.volume(0.37);
+									SOUNDS.pencil.play();
+									self.CONNECTIONS_REMAINING--;
+									console.log(self.CONNECTIONS_REMAINING);
+								}
 							}
-
+						}
+						//Good connection, but can't make any more
+						else{
+							console.log("no more!");
+							_PLUCK();
 						}
 					}
 
 					// back to normal
-					self.state = 0; 
+					self.state = 0;
 
 				}
 
@@ -135,7 +146,7 @@ function ConnectorCutter(config){
 				if(wasLineCut==-1){ // uncuttable
 					_PLUCK();
 				}
-			
+
 				// Add to trail
 				self.cutTrail.unshift([mouse.x,mouse.y]); // add to start
 

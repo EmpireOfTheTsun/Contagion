@@ -108,7 +108,7 @@ function Connection(config){
 			cTo = self.from;
 		}
 
-		// boop! 
+		// boop!
 		if(cFrom && cTo){
 
 			// ANIMATE IT
