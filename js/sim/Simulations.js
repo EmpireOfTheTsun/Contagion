@@ -219,6 +219,9 @@ function Sim(config){
 		// Contagion
 		self.contagion = self.networkConfig.contagion;
 
+		//AI mode. 0 if not specified.
+		self.ai_mode = self.networkConfig.ai_mode == null ? 0 : self.networkConfig.ai_mode;
+		console.log(self.ai_mode);
 	};
 
 	// Update
@@ -691,6 +694,7 @@ function Sim(config){
 					c.shake();
 				}else{
 					wasLineCut = 1;
+					ConnectorCutter.CONNECTIONS_REMAINING++;
 					self.connections.splice(i,1);
 				}
 			}

@@ -17,7 +17,6 @@ function ConnectorCutter(config){
 	var _SNIP = function(){
 		_SNIP_SOUND = (_SNIP_SOUND+1)%3;
 		SOUNDS["snip"+_SNIP_SOUND].play();
-		ConnectorCutter.CONNECTIONS_REMAINING++;
 		console.log(ConnectorCutter.CONNECTIONS_REMAINING);
 		publish("sim/connection_update");
 	};
@@ -100,7 +99,7 @@ function ConnectorCutter(config){
 						//Good connection, but can't make any more
 						else{
 							console.log("no more!");
-							publish("sim/out_of_connections");							
+							publish("sim/out_of_connections");
 							_PLUCK();
 						}
 					}
