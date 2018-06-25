@@ -3,7 +3,8 @@ function ConnectorCutter(config){
 	var self = this;
 	self.config = config;
 	self.sim = config.sim;
-	ConnectorCutter.CONNECTIONS_REMAINING = 3;
+	ConnectorCutter.MAX_CONNECTIONS = 3;
+	ConnectorCutter.CONNECTIONS_REMAINING = ConnectorCutter.MAX_CONNECTIONS;
 
 
 	// Connecting/Cutting

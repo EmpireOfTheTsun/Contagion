@@ -9,6 +9,9 @@ An interactive game in the BACKGROUND of the Slideshow...
 function Simulations(){
 
 	var self = this;
+	self.playerAlphaPeep = null;
+	self.enemyAlphaPeep = null;
+
 	self.dom = $("#simulations");
 
 	self.sims = [];
@@ -61,6 +64,25 @@ function Simulations(){
 			});
 	}
 
+	Simulations.ai_turn = function(){
+		self.sims.forEach(function(sim){
+			//TODO: remove existing connections
+			var peepsToConnect = [];
+			//ALPHA PEEP code, will need refactoring
+			var peepsList = sim.peeps;
+			while (peepsToConnect.length < ConnectorCutter.MAX_CONNECTIONS){
+				var peep = peepsList[Math.floor(Math.random()*peepsList.length)];
+				console.log(peep);
+				if (!peep.alphaPeep && peepsToConnect.indexOf(peep) == -1){
+					peepsToConnect.push(peep);
+					console.log("above is added");
+					//not sure multiple sims is possible. But if it is, this may cause bugs due to enemyAlphaPeep being static.
+					sim.addConnection(enemyAlphaPeep, peep, 1);
+			  }
+			}
+		});
+	}
+
 	// Update
 	self.update = function(){
 		if(Simulations.requestStart){
@@ -87,7 +109,6 @@ function Simulations(){
 
 	self.CLOCK = -1;
 	subscribe("sim/start", function(){
-
 		Simulations.IS_RUNNING = true;
 		$("#container").setAttribute("sim_is_running",true);
 
@@ -220,7 +241,7 @@ function Sim(config){
 		self.contagion = self.networkConfig.contagion;
 
 		//AI mode. 0 if not specified.
-		self.ai_mode = self.networkConfig.ai_mode == null ? 0 : self.networkConfig.ai_mode;
+		Simulations.ai_mode = self.networkConfig.ai_mode == null ? 0 : self.networkConfig.ai_mode;
 		console.log(self.ai_mode);
 	};
 
@@ -502,7 +523,7 @@ function Sim(config){
 		// PEEPS: If not already infected & past threshold, infect
 		self.peeps.forEach(function(peep){
 			console.log(peep.alphaPeep);
-			if(!peep.infected && peep.isPastThreshold){
+			if(!peep.infected && peep.isPastThreshold && peep.alphaPeep === 0){
 				// timeout for animation
 				setTimeout(function(){
 					peep.infect();
@@ -639,6 +660,12 @@ function Sim(config){
 			alphaPeep = 0;
 		}
 		var peep = new Peep({ x:x, y:y, infected:infected, alphaPeep:alphaPeep, sim:self });
+		if (alphaPeep){
+			if (infected){
+				playerAlphaPeep = peep;
+			}
+			else enemyAlphaPeep = peep;
+		}
 		self.peeps.push(peep);
 		return peep;
 	};
@@ -684,7 +711,7 @@ function Sim(config){
 			return peep.hitTest(self.mouse.x, self.mouse.y, mouseBuffer);
 		});
 	};
-	self.tryCuttingConnections = function(line){
+	self.tryCuttingConnections = function(line){//TODO HERE
 		var wasLineCut = 0;
 		for(var i=self.connections.length-1; i>=0; i--){ // going BACKWARDS coz killing connections
 			var c = self.connections[i];

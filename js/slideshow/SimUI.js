@@ -15,6 +15,11 @@ function SimUI(container, color){
 	startButton.onclick = function(event){
 		publish("sound/button");
 		if(!Simulations.inProgress){
+			console.log(Simulations.ai_mode);
+			if (Simulations.ai_mode){
+				console.log("hu");
+				Simulations.ai_turn();
+			}
 			Simulations.IS_RUNNING = true;
 			Simulations.requestStart = true;
 			publish("sim/start");
@@ -23,7 +28,7 @@ function SimUI(container, color){
 	_stopPropButton(startButton);
 
 	//Separating into 2 functions prevents bug that can occur when toggling UI
-	//buttons in simple networks
+	//buttons in small networks
 	var _roundEnd = function(){
 			startButton.innerHTML = getWords("sim_start");
 			self.container.removeAttribute("active");
