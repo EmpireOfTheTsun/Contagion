@@ -8,6 +8,7 @@ function Peep(config){
 	self.velocity = {x:0, y:0};
 	self.infected = !!config.infected;
 	self.sim = config.sim;
+	self.alphaPeep = config.alphaPeep;
 
 	// Update:
 	self.numFriends = 0;
@@ -364,6 +365,10 @@ function Peep(config){
 	// Infect
 	self.infect = function(){
 		self.infected = true;
+	};
+
+	self.uninfect = function(){
+		self.infected = false;
 	};
 
 	// Shake

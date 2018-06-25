@@ -39,7 +39,6 @@ function Simulations(){
 
 	self.endRound = function(){
 		Simulations.IS_RUNNING = false;
-		console.log("done");
 		publish("sim/round_over");
 		Simulations.inProgress = false;
 	}
@@ -47,14 +46,12 @@ function Simulations(){
 	self.beginRound = function(){
 		Simulations.requestStart = false;
 		Simulations.inProgress = true;
-		console.log("start");
 		var remainingSims = self.sims.length;
 			// Step all sims!
 			self.sims.forEach(function(sim){
 				setTimeout(function(){
 					sim.nextStep();
 					remainingSims--;
-					console.log("step"+remainingSims);
 					if (remainingSims == 0){
 						setTimeout(function(){
 							self.endRound();
@@ -207,7 +204,8 @@ function Sim(config){
 			var x = p[0],
 				y = p[1],
 				infected = p[2];
-			self.addPeep(x, y, infected);
+				alphaPeep = p[3];
+			self.addPeepAlpha(x, y, infected, alphaPeep);
 		});
 
 		// Connections
@@ -500,10 +498,16 @@ function Sim(config){
 
 		// PEEPS: If not already infected & past threshold, infect
 		self.peeps.forEach(function(peep){
+			console.log(peep.alphaPeep);
 			if(!peep.infected && peep.isPastThreshold){
 				// timeout for animation
 				setTimeout(function(){
 					peep.infect();
+				},333);
+			}
+			else if (peep.infected && !peep.isPastThreshold && peep.numFriends !== 0 && peep.alphaPeep === 0){
+				setTimeout(function(){
+					peep.uninfect();
 				},333);
 			}
 		});
@@ -627,8 +631,16 @@ function Sim(config){
 	////////////////
 
 	// Add Peeps/Connections
+	self.addPeepAlpha = function(x, y, infected, alphaPeep){//TODO WOW
+		if (alphaPeep == null){
+			alphaPeep = 0;
+		}
+		var peep = new Peep({ x:x, y:y, infected:infected, alphaPeep:alphaPeep, sim:self });
+		self.peeps.push(peep);
+		return peep;
+	};
 	self.addPeep = function(x, y, infected){
-		var peep = new Peep({ x:x, y:y, infected:infected, sim:self });
+		var peep = new Peep({ x:x, y:y, infected:infected, alphaPeep:0, sim:self });
 		self.peeps.push(peep);
 		return peep;
 	};

@@ -102,7 +102,10 @@ function Connection(config){
 		if(self.from.infected && (!self.to.infected && self.to.isPastThreshold)){
 			cFrom = self.from;
 			cTo = self.to;
-		}
+			//past threshold = infect. before threshold = no infect
+		} //do the infecting here BUT you gotta retain the state... OR Maybe have a special edge if they both infect each other?
+		//Also gotta ensure that all the calcs are done BEFORE any node changes. Maybe solving this will solve above?
+		//How can we get connections to communicate?
 		if(self.to.infected && (!self.from.infected && self.from.isPastThreshold)){
 			cFrom = self.to;
 			cTo = self.from;
