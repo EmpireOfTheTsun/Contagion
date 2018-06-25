@@ -4,7 +4,21 @@ SLIDES.push(
 	clear:true,
 
 	add:[
-
+		// Words
+		{
+			id:"connections_dialog",
+			type:"box",
+			text:"sandbox_caption",
+			x:660, y:0, w:300, h:40,
+			align:"center"
+		},
+		{
+			id:"round_dialog",
+			type:"box",
+			text:"round_caption",
+			x:250, y:0, w:300, h:40,
+			align:"center"
+		},
 		// The fullscreen simulation
 		{
 			type:"sim",
@@ -29,15 +43,9 @@ SLIDES.push(
 			type:"box",
 			x:35, y:400,
 			sim_ui:"red"
-		},
-
-		// Words
-		{
-			type:"box",
-			text:"sandbox_caption",
-			x:660, y:0, w:300, h:40,
-			align:"center"
 		}
+
+
 
 
 	]

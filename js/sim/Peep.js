@@ -1,5 +1,5 @@
 function Peep(config){
-	
+
 	var self = this;
 
 	// Properties
@@ -58,7 +58,8 @@ function Peep(config){
 			// complex
 			if(self.numFriends>0){
 				var ratio = self.numInfectedFriends/self.numFriends;
-				if(ratio>=self.sim.contagion-0.0001){ // floating point errors
+				var rand = Math.random();
+				if(ratio>=rand){ //Adding random element for voter model
 					self.isPastThreshold = true;
 				}
 			}
@@ -116,7 +117,7 @@ function Peep(config){
 			}
 			var coulombTotalForce = {x:0, y:0};
 			self.sim.peeps.forEach(function(peep){
-				
+
 				if(peep==self) return; // not self
 				if(friends.indexOf(peep)>=0) return; // not a friend
 
@@ -200,19 +201,18 @@ function Peep(config){
 		if(self.sim.options.CONCLUSION){
 			var distance = getVectorLength(self);
 			if(distance < self.sim.options.CONCLUSION_GLOW_RADIUS){
-				//self.isPastThreshold = true;
 				myFrame = self.conclusionFrame;
 				infectedFrame = self.conclusionFrame;
 			}
 		}
 		self.sprite.rotation = bodyRotation;
-		if(self.isPastThreshold){ // highlight! glow!
+		if(self.numInfectedFriends>0){ // highlight! glow!
 
 			_glowAnim += 0.03;
 			var _glowScale = 1 + Math.sin(_glowAnim)*0.04;
 			ctx.globalAlpha = 0.35;
 			self.sprite.scale = _initSpriteScale*1.25*_glowScale;
-			
+
 			self.sprite.gotoFrame(infectedFrame);
 			self.sprite.draw(ctx);
 
@@ -312,7 +312,7 @@ function Peep(config){
 			ctx.beginPath();
 			ctx.rect(-barWidth/2, -barHeight/2, barWidth, barHeight);
 			ctx.fill();
-			
+
 			// the color fill
 			if(self.numFriends>0){
 				ctx.fillStyle = infectedColor;
@@ -350,13 +350,13 @@ function Peep(config){
 		var dx = self.x-x;
 		var dy = self.y-y;
 		var dist2 = dx*dx+dy*dy;
-		
+
 		var r = radius;
 		var s;
 		if(s = self.sim.options.scale) r*=s;
-		
+
 		r = buffer ? Math.max(r+10, 40) : r;
-		
+
 		return (dist2<r*r);
 
 	};

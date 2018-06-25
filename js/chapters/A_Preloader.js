@@ -28,18 +28,18 @@ SLIDES.push(
 		{
 			type:"box",
 			id:"title",
-			text:"preloader_title", x:180, y:125, w:600, h:230, align:"center"
+			text:"preloader_title", x:180, y:100, w:600, h:230, align:"center"
 		},
 		{
 			type:"box",
 			id:"button",
-			text:"preloader_button", x:180, y:355, w:600, h:100, align:"center"
+			text:"preloader_button", x:180, y:420, w:600, h:100, align:"center"
 		}
 
 	],
 
 	onstart: function(slideshow){
-		
+
 		var button = slideshow.boxes.boxes[1].children[0];
 		button.setAttribute("disabled", true);
 

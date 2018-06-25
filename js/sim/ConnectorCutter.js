@@ -3,7 +3,7 @@ function ConnectorCutter(config){
 	var self = this;
 	self.config = config;
 	self.sim = config.sim;
-	self.CONNECTIONS_REMAINING = 3;
+	ConnectorCutter.CONNECTIONS_REMAINING = 3;
 
 
 	// Connecting/Cutting
@@ -17,8 +17,9 @@ function ConnectorCutter(config){
 	var _SNIP = function(){
 		_SNIP_SOUND = (_SNIP_SOUND+1)%3;
 		SOUNDS["snip"+_SNIP_SOUND].play();
-		self.CONNECTIONS_REMAINING++;
-		console.log(self.CONNECTIONS_REMAINING);
+		ConnectorCutter.CONNECTIONS_REMAINING++;
+		console.log(ConnectorCutter.CONNECTIONS_REMAINING);
+		publish("sim/connection_update");
 	};
 	var _PLUCK_SOUND_INDEX = 0;
 	var _PLUCK_SOUND = [0,1,2,3,2,1];
@@ -82,7 +83,7 @@ function ConnectorCutter(config){
 
 					// End connect?
 					if(self.state==1){
-						if (self.CONNECTIONS_REMAINING > 0){
+						if (ConnectorCutter.CONNECTIONS_REMAINING > 0){
 							var peepReleased = self.sim.getHoveredPeep(20);
 							if(peepReleased){
 								var successfulConnection = self.sim.addConnection(self.connectFrom, peepReleased);
@@ -90,14 +91,16 @@ function ConnectorCutter(config){
 								if(successfulConnection){
 									SOUNDS.pencil.volume(0.37);
 									SOUNDS.pencil.play();
-									self.CONNECTIONS_REMAINING--;
-									console.log(self.CONNECTIONS_REMAINING);
+									ConnectorCutter.CONNECTIONS_REMAINING--;
+									console.log(ConnectorCutter.CONNECTIONS_REMAINING);
+									publish("sim/connection_update");
 								}
 							}
 						}
 						//Good connection, but can't make any more
 						else{
 							console.log("no more!");
+							publish("sim/out_of_connections");							
 							_PLUCK();
 						}
 					}
