@@ -37,15 +37,6 @@ function ConnectorCutter(config){
 
 		var mouse = self.sim.mouse;
 
-		// TOTAL HACK: if you're clicking within the sandbox UI, FORGET IT
-		//TODO: verify this is ok to comment
-		// if(self.sim.SANDBOX_MODE){
-		// 	if(mouse.x>0 && mouse.x<280){
-		// 		if(mouse.justPressed){
-		// 			return; // FORGET ITTTTTT
-		// 		}
-		// 	}
-		// }
 
 		// IF SANDBOX STATE = PENCIL, complex mouse shtuff
 		if(self.sandbox_state==0){
@@ -62,7 +53,7 @@ function ConnectorCutter(config){
 						//right clicks
 						if(mouse.rightClick){
 							//TODO: Signal to player that trying to take orbit when not there!
-							if(peepClicked.playerOrbits > 0){
+							if(peepClicked.playerOrbits.length > 0){
 								self.sim.removeOrbitConnection(peepClicked, true);
 								SOUNDS.pencil.volume(0.37);
 								SOUNDS.pencil.play();

@@ -152,6 +152,13 @@ function Simulations(){
 
 // On resize, adjust the fullscreen sim (if any).
 window.addEventListener("resize", function(){
+	if (window.jQuery) {
+			// jQuery is loaded
+			console.log("Yeah!");
+	} else {
+			// jQuery is not loaded
+			console.log("Doesn't Work");
+	}
 	if(slideshow.simulations.sims.length>0){
 		slideshow.simulations.sims[0].resize();
 	}
@@ -675,6 +682,7 @@ function Sim(config){
 		self.peeps.push(peep);
 		return peep;
 	};
+
 	self.addPeep = function(x, y, infected){
 		var peep = new Peep({ x:x, y:y, infected:infected, alphaPeep:0, sim:self });
 		self.peeps.push(peep);
@@ -705,21 +713,30 @@ function Sim(config){
 	//Do I make invisible link? Would be hard to cut...
 	//It can't be this simple...
 	self.addOrbitConnection = function(target, isPlayer){
-		if(isPlayer){
-			target.playerOrbits++;
+		var orbiter = {
+	    elt: null
+	    ,a: 3.142         // in radian. original position. pi=north
+	    ,r: 45         // radius
+	    ,da: 0.05     // in radian. speed of orbit
+	    ,x: 0
+	    ,y: 0
+	    // Center is actualy center (100, 100) minus
+	    // half the size of the orbiting object 15x15
+	    ,center: { x: (-10), y: (-10) }
 		}
-		else target.aiOrbits++;
-
-			//var connection = new Connection({ from:from, to:target, uncuttable:0, sim:self });
-			//self.connections.push(connection);
-			//return connection;
+		if(isPlayer){
+			target.playerOrbits.push(orbiter);
+			//console.log(target);
+		}
+		else target.aiOrbits.push(orbiter);
 	}
+
 
 	self.removeOrbitConnection = function(target, isPlayer){
 		if(isPlayer){
-			target.playerOrbits--;
+			target.playerOrbits.pop();
 		}
-		else target.aiOrbits--;
+		else target.aiOrbits.pop();
 
 	}
 
