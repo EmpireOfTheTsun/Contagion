@@ -13,6 +13,8 @@ function Peep(config){
 	// Update:
 	self.numFriends = 0;
 	self.numInfectedFriends = 0;
+	self.playerOrbits = 0;
+	self.aiOrbits = 0;
 	self.isPastThreshold = false;
 	self.faceX = 0;
 	self.faceY = 0;
@@ -49,6 +51,9 @@ function Peep(config){
 		friends.forEach(function(friend){
 			if(friend.infected) self.numInfectedFriends++;
 		});
+		self.numFriends += self.playerOrbits;
+		self.numFriends += self.aiOrbits;
+		self.numInfectedFriends += self.playerOrbits;
 
 		// Past threshold?
 		self.isPastThreshold = false;

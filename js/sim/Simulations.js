@@ -67,17 +67,23 @@ function Simulations(){
 	Simulations.ai_turn = function(){
 		self.sims.forEach(function(sim){
 			//TODO: remove existing connections
-			var peepsToConnect = [];
+			sim.aiLines.forEach(function(line){
+				var index = sim.connections.indexOf(line);
+				if (index !== -1){
+					sim.connections.splice(index, 1);
+				}
+			});
+			sim.aiLines = [];
 			//ALPHA PEEP code, will need refactoring
 			var peepsList = sim.peeps;
-			while (peepsToConnect.length < ConnectorCutter.MAX_CONNECTIONS){
+			while (sim.aiLines.length < ConnectorCutter.MAX_CONNECTIONS){
 				var peep = peepsList[Math.floor(Math.random()*peepsList.length)];
-				console.log(peep);
-				if (!peep.alphaPeep && peepsToConnect.indexOf(peep) == -1){
-					peepsToConnect.push(peep);
-					console.log("above is added");
+				if (!peep.alphaPeep){
 					//not sure multiple sims is possible. But if it is, this may cause bugs due to enemyAlphaPeep being static.
-					sim.addConnection(enemyAlphaPeep, peep, 1);
+					var connection = sim.addConnection(enemyAlphaPeep, peep, 0);
+					if(connection != null){
+						sim.aiLines.push(connection);
+					}
 			  }
 			}
 		});
@@ -155,9 +161,11 @@ function Sim(config){
 
 	var self = this;
 	self.config = config;
+	console.log(self.config);
 	self.networkConfig = cloneObject(config.network);
 	self.container = config.container;
 	self.options = config.options || {};
+	self.aiLines = [];
 
 	self.id = config.id;
 
@@ -242,7 +250,6 @@ function Sim(config){
 
 		//AI mode. 0 if not specified.
 		Simulations.ai_mode = self.networkConfig.ai_mode == null ? 0 : self.networkConfig.ai_mode;
-		console.log(self.ai_mode);
 	};
 
 	// Update
@@ -522,7 +529,6 @@ function Sim(config){
 
 		// PEEPS: If not already infected & past threshold, infect
 		self.peeps.forEach(function(peep){
-			console.log(peep.alphaPeep);
 			if(!peep.infected && peep.isPastThreshold && peep.alphaPeep === 0){
 				// timeout for animation
 				setTimeout(function(){
@@ -655,7 +661,7 @@ function Sim(config){
 	////////////////
 
 	// Add Peeps/Connections
-	self.addPeepAlpha = function(x, y, infected, alphaPeep){//TODO WOW
+	self.addPeepAlpha = function(x, y, infected, alphaPeep){
 		if (alphaPeep == null){
 			alphaPeep = 0;
 		}
@@ -694,8 +700,30 @@ function Sim(config){
 		var connection = new Connection({ from:from, to:to, uncuttable:uncuttable, sim:self });
 		self.connections.push(connection);
 		return connection;
-
 	};
+
+	//Do I make invisible link? Would be hard to cut...
+	//It can't be this simple...
+	self.addOrbitConnection = function(target, isPlayer){
+		if(isPlayer){
+			target.playerOrbits++;
+		}
+		else target.aiOrbits++;
+
+			//var connection = new Connection({ from:from, to:target, uncuttable:0, sim:self });
+			//self.connections.push(connection);
+			//return connection;
+	}
+
+	self.removeOrbitConnection = function(target, isPlayer){
+		if(isPlayer){
+			target.playerOrbits--;
+		}
+		else target.aiOrbits--;
+
+	}
+
+
 	self.getFriendsOf = function(peep){
 		var friends = [];
 		for(var i=0; i<self.connections.length; i++){ // in either direction
@@ -721,7 +749,6 @@ function Sim(config){
 					c.shake();
 				}else{
 					wasLineCut = 1;
-					ConnectorCutter.CONNECTIONS_REMAINING++;
 					self.connections.splice(i,1);
 				}
 			}

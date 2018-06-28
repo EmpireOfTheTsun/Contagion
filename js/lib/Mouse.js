@@ -7,6 +7,10 @@ var Mouse = {
 	pressed:false
 };
 Mouse.ondown = function(event){
+	Mouse.rightClick = false;
+	if (event.button == 2){
+		Mouse.rightClick = true;
+	}
 	Mouse.pressed = true;
 	Mouse.onmove(event);
 	publish("mouse/down");
@@ -45,11 +49,14 @@ function _touchWrapper(callback){
 
 // ALSO DON'T SCROLL WHEN TOUCH
 document.body.addEventListener("touchstart", function(e){
-    e.preventDefault(); 
+    e.preventDefault();
 },false); // do NOT capture.
 document.body.addEventListener("touchmove", function(e){
-    e.preventDefault(); 
+    e.preventDefault();
 },false); // do NOT capture.
+document.addEventListener('contextmenu', function(e){
+	e.preventDefault();
+},false);
 
 // INIT
 Mouse.init = function(target){

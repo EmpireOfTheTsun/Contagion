@@ -38,22 +38,17 @@ function ConnectorCutter(config){
 		var mouse = self.sim.mouse;
 
 		// TOTAL HACK: if you're clicking within the sandbox UI, FORGET IT
-		if(self.sim.SANDBOX_MODE){
-			if(mouse.x>0 && mouse.x<280){
-				if(mouse.justPressed){
-					return; // FORGET ITTTTTT
-				}
-			}
-		}
+		//TODO: verify this is ok to comment
+		// if(self.sim.SANDBOX_MODE){
+		// 	if(mouse.x>0 && mouse.x<280){
+		// 		if(mouse.justPressed){
+		// 			return; // FORGET ITTTTTT
+		// 		}
+		// 	}
+		// }
 
 		// IF SANDBOX STATE = PENCIL, complex mouse shtuff
 		if(self.sandbox_state==0){
-
-			// JUST CLICKED & SIM'S RUNNING? STOP
-			if(Simulations.IS_RUNNING && mouse.justPressed){
-				Simulations.IS_RUNNING = false;
-				publish("sim/stop");
-			}
 
 			// only if sim is NOT RUNNING
 			if(!Simulations.IS_RUNNING){
@@ -64,55 +59,42 @@ function ConnectorCutter(config){
 					// Clicked on a peep?
 					var peepClicked = self.sim.getHoveredPeep(20);
 					if(peepClicked){
-
-						self.state = 1; // START CONNECTING
-						self.connectFrom = peepClicked;
-
-						// SOUND!
-						SOUNDS.pencil_short.volume(0.37);
-						SOUNDS.pencil_short.play();
-
-					}else{
-						self.state = 2; // START ERASING
-					}
-
-				}
-
-				// JUST RELEASED, and state!=0... can either stop connecting or cutting!
-				if(mouse.justReleased && self.state!==0){
-
-					// End connect?
-					if(self.state==1){
-						if (ConnectorCutter.CONNECTIONS_REMAINING > 0){
-							var peepReleased = self.sim.getHoveredPeep(20);
-							if(peepReleased){
-								var successfulConnection = self.sim.addConnection(self.connectFrom, peepReleased);
-								// SOUND!
-								if(successfulConnection){
-									SOUNDS.pencil.volume(0.37);
-									SOUNDS.pencil.play();
-									ConnectorCutter.CONNECTIONS_REMAINING--;
-									console.log(ConnectorCutter.CONNECTIONS_REMAINING);
-									publish("sim/connection_update");
-								}
+						//right clicks
+						if(mouse.rightClick){
+							//TODO: Signal to player that trying to take orbit when not there!
+							if(peepClicked.playerOrbits > 0){
+								self.sim.removeOrbitConnection(peepClicked, true);
+								SOUNDS.pencil.volume(0.37);
+								SOUNDS.pencil.play();
+								ConnectorCutter.CONNECTIONS_REMAINING++;
+								publish("sim/connection_update");
 							}
+
 						}
-						//Good connection, but can't make any more
+						//left click, and sufficient connections
+						else if (ConnectorCutter.CONNECTIONS_REMAINING > 0){
+								// SOUND!
+								self.sim.addOrbitConnection(peepClicked, true);
+								SOUNDS.pencil.volume(0.37);
+								SOUNDS.pencil.play();
+								ConnectorCutter.CONNECTIONS_REMAINING--;
+								publish("sim/connection_update");
+						}
+						//left click, but out of connections
 						else{
-							console.log("no more!");
 							publish("sim/out_of_connections");
 							_PLUCK();
 						}
 					}
 
-					// back to normal
-					self.state = 0;
+					// SOUND!
+					SOUNDS.pencil_short.volume(0.37);
+					SOUNDS.pencil_short.play();
+
+					}
 
 				}
 
-			}else{
-				self.state = 0;
-			}
 
 			// In "NORMAL" state... tell Pencil what frame to go to
 			if(self.state==0){
@@ -124,18 +106,7 @@ function ConnectorCutter(config){
 				}
 			}
 
-			// In "CONNECTING" state... show where to connect to
-			if(self.state==1){
 
-				// Connect to a nearby hovered peep?
-				var peepHovered = self.sim.getHoveredPeep(20);
-				if(peepHovered==self.connectFrom) peepHovered=null; // if same, nah
-				self.connectTo = peepHovered ? peepHovered : mouse;
-
-				// Pencil's always DARK
-				pencil.gotoFrame(1);
-
-			}
 
 			// In "CUTTING" state... cut intersected lines! & add to trail
 			if(self.state==2){
