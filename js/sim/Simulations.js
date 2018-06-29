@@ -6,6 +6,8 @@ An interactive game in the BACKGROUND of the Slideshow...
 
 ******************************/
 
+
+//SIM DELARED AT 167
 function Simulations(){
 
 	var self = this;
@@ -66,25 +68,19 @@ function Simulations(){
 
 	Simulations.ai_turn = function(){
 		self.sims.forEach(function(sim){
-			//TODO: remove existing connections
-			sim.aiLines.forEach(function(line){
-				var index = sim.connections.indexOf(line);
-				if (index !== -1){
-					sim.connections.splice(index, 1);
-				}
-			});
-			sim.aiLines = [];
-			//ALPHA PEEP code, will need refactoring
 			var peepsList = sim.peeps;
-			while (sim.aiLines.length < ConnectorCutter.MAX_CONNECTIONS){
+			peepsList.forEach(function(peep){
+				peep.aiOrbits = [];
+			});
+			var orbitsToAdd = 0;
+			while (orbitsToAdd < ConnectorCutter.MAX_CONNECTIONS){
+				//pick a random peep
 				var peep = peepsList[Math.floor(Math.random()*peepsList.length)];
-				if (!peep.alphaPeep){
-					//not sure multiple sims is possible. But if it is, this may cause bugs due to enemyAlphaPeep being static.
-					var connection = sim.addConnection(enemyAlphaPeep, peep, 0);
-					if(connection != null){
-						sim.aiLines.push(connection);
-					}
-			  }
+				orbitsToAdd++;
+				//NOTE: If you wanna discriminate what peeps get orbits, do that here.
+				//False denotes that it's not the current player doing this.
+				sim.addOrbitConnection(peep, false);
+				console.log(peep);
 			}
 		});
 	}
@@ -152,13 +148,6 @@ function Simulations(){
 
 // On resize, adjust the fullscreen sim (if any).
 window.addEventListener("resize", function(){
-	if (window.jQuery) {
-			// jQuery is loaded
-			console.log("Yeah!");
-	} else {
-			// jQuery is not loaded
-			console.log("Doesn't Work");
-	}
 	if(slideshow.simulations.sims.length>0){
 		slideshow.simulations.sims[0].resize();
 	}
@@ -168,11 +157,9 @@ function Sim(config){
 
 	var self = this;
 	self.config = config;
-	console.log(self.config);
 	self.networkConfig = cloneObject(config.network);
 	self.container = config.container;
 	self.options = config.options || {};
-	self.aiLines = [];
 
 	self.id = config.id;
 
@@ -608,12 +595,12 @@ function Sim(config){
 
 	};
 	_keyHandlers.push(subscribe("key/down/1",function(){
-		_resetConnectorCutter();
-		self._addPeepAtMouse(false);
+		//_resetConnectorCutter(); //NOTE: Uncomment these if you want to add the shortcuts back for testing
+		//self._addPeepAtMouse(false);
 	}));
 	_keyHandlers.push(subscribe("key/down/2",function(){
-		_resetConnectorCutter();
-		self._addPeepAtMouse(true);
+		//_resetConnectorCutter();
+		//self._addPeepAtMouse(true);
 	}));
 	self._addPeepAtMouse = function(infected){
 
@@ -624,8 +611,8 @@ function Sim(config){
 
 	};
 	_keyHandlers.push(subscribe("key/down/delete",function(){
-		_resetConnectorCutter();
-		self._deletePeep();
+		//_resetConnectorCutter();
+		//self._deletePeep();
 	}));
 	self._deletePeep = function(){
 
@@ -737,7 +724,6 @@ function Sim(config){
 			target.playerOrbits.pop();
 		}
 		else target.aiOrbits.pop();
-
 	}
 
 

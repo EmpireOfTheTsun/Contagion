@@ -16,7 +16,7 @@ SLIDES.push(
 			id:"round_dialog",
 			type:"box",
 			text:"round_caption",
-			x:250, y:0, w:300, h:40,
+			x:50, y:0, w:300, h:40,
 			align:"center"
 		},
 		// The fullscreen simulation
@@ -27,22 +27,16 @@ SLIDES.push(
 			network: {
 				"ai_mode":1,
 				"contagion":0.4,
-				"peeps":[[500,200,0],[500,350,1],[650,450,1],[800,350,1],[800,200,0],[650,100,0],[650,275,0,1]],//,[650,225,1,1], [650,325,0,1]],
+				"peeps":[[500,200,0],[500,350,1],[650,450,1],[800,350,1],[800,200,0],[650,100,0]],//[650,275,0,1]],//,[650,225,1,1], [650,325,0,1]],
 				"connections":[[0,1,1],[1,2,1],[2,3,1],[3,4,1],[4,5,1],[5,0,1]]
 			},
 		},
 
-		// The Sandbox UI
-		{
-			type:"box",
-			x:0, y:0,
-			sandbox:true
-		},
 
 		// Simulation UI
 		{
 			type:"box",
-			x:35, y:400,
+			x:102, y:70,
 			sim_ui:"red"
 		}
 

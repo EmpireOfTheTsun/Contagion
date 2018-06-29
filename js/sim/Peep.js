@@ -14,7 +14,7 @@ function Peep(config){
 	self.numFriends = 0;
 	self.numInfectedFriends = 0;
 	self.playerOrbits = [];
-	self.aiOrbits = 0;
+	self.aiOrbits = [];
 	self.isPastThreshold = false;
 	self.faceX = 0;
 	self.faceY = 0;
@@ -52,7 +52,7 @@ function Peep(config){
 			if(friend.infected) self.numInfectedFriends++;
 		});
 		self.numFriends += self.playerOrbits.length;
-		self.numFriends += self.aiOrbits;
+		self.numFriends += self.aiOrbits.length;
 		self.numInfectedFriends += self.playerOrbits.length;
 
 		// Past threshold?
@@ -351,9 +351,20 @@ function Peep(config){
 	    orbiter.y = orbiter.center.y + (orbiter.r * Math.cos(orbiter.a));
 			ctx.rect(orbiter.x, orbiter.y, 20,20);
 			ctx.fillStyle="#FF3333";
+			//			ctx.fillStyle=orbiter.color;
 			ctx.fill();
-
-	    console.log(orbiter);
+	    //orbiter.elt.style.top = orbiter.y + "px";
+	    //orbiter.elt.style.left = orbiter.x + "px";
+		});
+		self.aiOrbits.forEach(function(orbiter){
+			// each modification
+	    orbiter.a += orbiter.da;
+	    orbiter.x = orbiter.center.x + (orbiter.r * Math.sin(orbiter.a));
+	    orbiter.y = orbiter.center.y + (orbiter.r * Math.cos(orbiter.a));
+			ctx.rect(orbiter.x, orbiter.y, 20,20);
+			ctx.fillStyle="#333333";
+			//			ctx.fillStyle=orbiter.color;
+			ctx.fill();
 	    //orbiter.elt.style.top = orbiter.y + "px";
 	    //orbiter.elt.style.left = orbiter.x + "px";
 		});
