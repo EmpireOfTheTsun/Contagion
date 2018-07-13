@@ -7,8 +7,8 @@ function Peep(config){
 	self.y = config.y;
 	self.velocity = {x:0, y:0};
 	self.infected = !!config.infected;
+	self.id = config.id;
 	self.sim = config.sim;
-	self.alphaPeep = config.alphaPeep;
 
 	// Update:
 	self.numFriends = 0;

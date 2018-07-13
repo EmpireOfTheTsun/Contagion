@@ -4,20 +4,66 @@ An interactive game in the BACKGROUND of the Slideshow...
 (if fullscreen, origin is top-left of slideshow)
 (if not, allow MULTIPLE canvasses & games.)
 
+NB: While 'Sim' is used in such a way to allow for multiple sims running at once, in practice this is prevented even by the base program
+I have made an attempt to refactor things into the overall Simulations class, but much still remains.
+This makes for some untidy, but semantically sound code.
+
 ******************************/
 
 
 //SIM DELARED AT 167
 function Simulations(){
-
 	var self = this;
-	self.playerAlphaPeep = null;
-	self.enemyAlphaPeep = null;
-
 	self.dom = $("#simulations");
 
 	self.sims = [];
 	Simulations.inProgress= false;
+	Simulations.PERCENTAGE_INFECTED = 50;
+	//TODO TODO: In Slideshow.js, do a wait for serverResponse to have value, then set serverResponse to null again.
+	Simulations.awaitingResponse = false;
+
+	parseEvent = function(message){
+		console.log("message recieved");
+		console.log(message);
+		try{
+			message = JSON.parse(message.data);
+		}
+		catch(err){
+			console.log("Can't parse JSON:"+message.data);
+		}
+		awaitingResponse = false;
+		console.log(message.status);
+		switch(message.status){
+			case "CONFIG_TOKEN":
+				console.log(message.payload);
+				self.add(message.payload, true);
+				break;
+		}
+	}
+	self.serverSetup = function(){
+		self.ws = new WebSocket("ws://127.0.0.1:8081");
+		self.ws.onopen = function (event) {
+		self.ws.send("Connection Recieved.");
+		};
+		self.ws.onerror = function (err) {
+			console.log('err: ', err);
+		}
+		self.ws.onmessage = function (event) {
+			parseEvent(event);
+		};
+
+	}
+	self.serverSetup();
+
+	Simulations.sendServerMessage = function(msg){
+		self.ws.send(JSON.stringify(msg));
+	}
+
+	//Sends request to server, then sets awaiting response flag to true, to halt certain other parts of code until the config is returned.
+	Simulations.getConfig = function(){
+		Simulations.sendServerMessage(new Message(null,"NEW_GAME_TOKEN"));
+		awaitingResponse = true;
+	}
 
 	// Clear All Sims
 	self.clear = function(){
@@ -35,11 +81,14 @@ function Simulations(){
 
 	// Add Sims
 	self.add = function(config){
+		console.log(config);
 		config = cloneObject(config);
 		config.container = self;
 		var sim = new Sim(config);
+		console.log(sim);
 		self.dom.appendChild(sim.canvas);
 		self.sims.push(sim);
+		console.log(self.sims);
 	};
 
 	self.endRound = function(){
@@ -54,35 +103,25 @@ function Simulations(){
 		var remainingSims = self.sims.length;
 			// Step all sims!
 			self.sims.forEach(function(sim){
+				Simulations.sendServerMessage(sim.formatPeeps());
 				setTimeout(function(){
 					sim.nextStep();
 					remainingSims--;
 					if (remainingSims == 0){
 						setTimeout(function(){
+							sim.calculatePercentage();
 							self.endRound();
+							console.log(sim);
 						},500);
 					}
 				},333);
 			});
 	}
 
-	Simulations.ai_turn = function(){
-		self.sims.forEach(function(sim){
-			var peepsList = sim.peeps;
-			peepsList.forEach(function(peep){
-				peep.aiOrbits = [];
-			});
-			var orbitsToAdd = 0;
-			while (orbitsToAdd < ConnectorCutter.MAX_CONNECTIONS){
-				//pick a random peep
-				var peep = peepsList[Math.floor(Math.random()*peepsList.length)];
-				orbitsToAdd++;
-				//NOTE: If you wanna discriminate what peeps get orbits, do that here.
-				//False denotes that it's not the current player doing this.
-				sim.addOrbitConnection(peep, false);
-				console.log(peep);
-			}
-		});
+	Simulations.enemy_turn = function(){
+		//while(waitingForMessage){
+		console.log("*tumbleweed*");
+		//}
 	}
 
 	// Update
@@ -154,14 +193,12 @@ window.addEventListener("resize", function(){
 }, false);
 
 function Sim(config){
-
 	var self = this;
 	self.config = config;
 	self.networkConfig = cloneObject(config.network);
+	console.log(self.networkConfig);
 	self.container = config.container;
 	self.options = config.options || {};
-
-	self.id = config.id;
 
 	// CONTAGION SOUND
 	//var _CONTAGION_SOUND = 0;
@@ -173,15 +210,9 @@ function Sim(config){
 	};
 
 	// Canvas
-	if(config.fullscreen){
-		var container = $("#simulations_container");
-		self.canvas = createCanvas(container.clientWidth, container.clientHeight);
-	}else{
-		alert("this code should not run. if it does, something bad has happened.");
-		/*(self.canvas = createCanvas(config.width||500, config.height||500);
-		self.canvas.style.left = config.x || 0;
-		self.canvas.style.top = config.y || 0;*/
-	}
+	var container = $("#simulations_container");
+	self.canvas = createCanvas(container.clientWidth, container.clientHeight);
+
 	//self.canvas.style.border = "1px solid #ccc";
 	self.ctx = self.canvas.getContext('2d');
 
@@ -193,6 +224,41 @@ function Sim(config){
 
 	// Resize
 	var simOffset;
+
+//TODO: remove me when not needed
+	self.check = function(obj) {
+	  var seenObjects = [];
+
+	  function detect (obj) {
+	    if (obj && typeof obj === 'object') {
+	      if (seenObjects.indexOf(obj) !== -1) {
+	        return true;
+	      }
+	      seenObjects.push(obj);
+	      for (var key in obj) {
+	        if (obj.hasOwnProperty(key) && detect(obj[key])) {
+	          console.log(obj, 'cycle at ' + key);
+	          return true;
+	        }
+	      }
+	    }
+	    return false;
+	  }
+
+	  return detect(obj);
+	}
+
+	//TODO: Change 'aiorbits' when multiplayer properly implemented
+	//NB: IDs for each peep isn't strictly necessary, but is nice to have to prevent potential insidious bugs, helps debugging, or help expand on this one day.
+	self.formatPeeps = function(){
+		var formattedPeeps = []
+		self.peeps.forEach(function(peep){
+			var formattedPeep = new ClientToServerPeep(peep.id, peep.playerOrbits.length);
+			formattedPeeps.push(formattedPeep);
+		});
+		return formattedPeeps;
+	}
+
 	self.resize = function(){
 
 		var container = $("#simulations_container");
@@ -227,8 +293,7 @@ function Sim(config){
 			var x = p[0],
 				y = p[1],
 				infected = p[2];
-				alphaPeep = p[3];
-			self.addPeepAlpha(x, y, infected, alphaPeep);
+			self.addPeep(x, y, infected);
 		});
 
 		// Connections
@@ -239,11 +304,7 @@ function Sim(config){
 			self.addConnection(from, to, uncuttable);
 		});
 
-		// Contagion
-		self.contagion = self.networkConfig.contagion;
 
-		//AI mode. 0 if not specified.
-		Simulations.ai_mode = self.networkConfig.ai_mode == null ? 0 : self.networkConfig.ai_mode;
 	};
 
 	// Update
@@ -523,13 +584,13 @@ function Sim(config){
 
 		// PEEPS: If not already infected & past threshold, infect
 		self.peeps.forEach(function(peep){
-			if(!peep.infected && peep.isPastThreshold && peep.alphaPeep === 0){
+			if(!peep.infected && peep.isPastThreshold){
 				// timeout for animation
 				setTimeout(function(){
 					peep.infect();
 				},333);
 			}
-			else if (peep.infected && !peep.isPastThreshold && peep.numFriends !== 0 && peep.alphaPeep === 0){
+			else if (peep.infected && !peep.isPastThreshold && peep.numFriends !== 0){
 				setTimeout(function(){
 					peep.uninfect();
 				},333);
@@ -550,6 +611,16 @@ function Sim(config){
 		});
 
 	};
+
+	self.calculatePercentage = function(){
+		var totalInfected = 0;
+		self.peeps.forEach(function(peep){
+			if (peep.infected){
+				totalInfected++;
+			}
+		});
+		Simulations.PERCENTAGE_INFECTED =  Math.round(100 * (totalInfected / self.peeps.length));
+	}
 
 	///////////////////////////////
 	// secret keyboard interface //
@@ -655,23 +726,10 @@ function Sim(config){
 	////////////////
 
 	// Add Peeps/Connections
-	self.addPeepAlpha = function(x, y, infected, alphaPeep){
-		if (alphaPeep == null){
-			alphaPeep = 0;
-		}
-		var peep = new Peep({ x:x, y:y, infected:infected, alphaPeep:alphaPeep, sim:self });
-		if (alphaPeep){
-			if (infected){
-				playerAlphaPeep = peep;
-			}
-			else enemyAlphaPeep = peep;
-		}
-		self.peeps.push(peep);
-		return peep;
-	};
-
 	self.addPeep = function(x, y, infected){
-		var peep = new Peep({ x:x, y:y, infected:infected, alphaPeep:0, sim:self });
+		//ID of peep is the nth one added to the network, zero indexed.
+		var peepID = self.peeps.length;
+		var peep = new Peep({ x:x, y:y, infected:infected, id:peepID, sim:self });
 		self.peeps.push(peep);
 		return peep;
 	};

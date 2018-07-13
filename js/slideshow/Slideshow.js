@@ -28,6 +28,13 @@ function Slideshow(){
 	self.IS_TRANSITIONING = false;
 	self.goto = function(index, forceClear){
 
+		//send server message requesting config for new game.
+		//Does this early to prevent waiting later on.
+		// >5 to prevent it happening on load. TODO: take this out when refactored.
+		if (index > 5){
+			Simulations.getConfig();
+		}
+
 		// Wait for transition to finish!
 		if(self.IS_TRANSITIONING) return;
 		self.IS_TRANSITIONING = true;
@@ -104,22 +111,29 @@ function Slideshow(){
 			var _delayAdd = ((slide.remove.length + slide.move.length)>0) ? _delay : 0;
 			_setTimeout(function(){
 				var withFade = ((slide.remove.length + slide.move.length)>0);
-
+				var hasSim = false;
 				slide.add.forEach(function(childConfig){
 					switch(childConfig.type){
 						case "box":
 							self.boxes.add(childConfig, withFade);
 							break;
 						case "sim":
+							hasSim = true;
 							if(childConfig.ONLY_IF_IT_DOESNT_ALREADY_EXIST
 								&& self.simulations.sims.length>0){
 								// then nothing
 							}else{
+								console.log("TESTEST")
 								self.simulations.add(childConfig, withFade);
 							}
 							break;
 					}
-				})
+				});
+				while (Simulations.awaitingResponse){
+					//wait for config options from server before continuing.
+					console.log("waiting...");
+				}
+				//hmmmmm i COULD fix it here but that would make for confusing code TODO aaa
 
 			}, _delayAdd);
 

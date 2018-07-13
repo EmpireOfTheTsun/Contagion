@@ -51,8 +51,6 @@ function ConnectorCutter(config){
 					var peepClicked = self.sim.getHoveredPeep(20);
 					if(peepClicked){
 						//right clicks
-						console.log(peepClicked.numInfectedFriends);
-						console.log(peepClicked.numFriends);
 						if(mouse.rightClick){
 							//TODO: Signal to player that trying to take orbit when not there!
 							if(peepClicked.playerOrbits.length > 0){
