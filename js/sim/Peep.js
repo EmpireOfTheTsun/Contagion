@@ -55,22 +55,6 @@ function Peep(config){
 		self.numFriends += self.aiOrbits.length;
 		self.numInfectedFriends += self.playerOrbits.length;
 
-		// Past threshold?
-		self.isPastThreshold = false;
-		if(self.sim.contagion==0){
-			// simple
-			if(self.numInfectedFriends>0) self.isPastThreshold = true;
-		}else{
-			// complex
-			if(self.numFriends>0){
-				var ratio = self.numInfectedFriends/self.numFriends;
-				var rand = Math.random();
-				if(ratio>=rand){ //Adding random element for voter model
-					self.isPastThreshold = true;
-				}
-			}
-		}
-
 		// SPLASH: FORCE-DIRECTED
 		if(self.sim.options.splash){
 
@@ -340,12 +324,14 @@ function Peep(config){
 				ctx.stroke();
 			ctx.restore();
 
-			ctx.restore();
+			//ctx.restore();
 
 		}
 		//orbiting stuff
 		self.playerOrbits.forEach(function(orbiter){
 			// each modification
+			ctx.save();
+			ctx.beginPath();
 	    orbiter.a += orbiter.da;
 	    orbiter.x = orbiter.center.x + (orbiter.r * Math.sin(orbiter.a));
 	    orbiter.y = orbiter.center.y + (orbiter.r * Math.cos(orbiter.a));
@@ -353,11 +339,14 @@ function Peep(config){
 			ctx.fillStyle="#FF3333";
 			//			ctx.fillStyle=orbiter.color;
 			ctx.fill();
+			ctx.restore();
 	    //orbiter.elt.style.top = orbiter.y + "px";
 	    //orbiter.elt.style.left = orbiter.x + "px";
 		});
 		self.aiOrbits.forEach(function(orbiter){
 			// each modification
+			ctx.save();
+			ctx.beginPath();
 	    orbiter.a += orbiter.da;
 	    orbiter.x = orbiter.center.x + (orbiter.r * Math.sin(orbiter.a));
 	    orbiter.y = orbiter.center.y + (orbiter.r * Math.cos(orbiter.a));
@@ -365,6 +354,8 @@ function Peep(config){
 			ctx.fillStyle="#333333";
 			//			ctx.fillStyle=orbiter.color;
 			ctx.fill();
+			ctx.restore();
+
 	    //orbiter.elt.style.top = orbiter.y + "px";
 	    //orbiter.elt.style.left = orbiter.x + "px";
 		});

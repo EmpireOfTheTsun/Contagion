@@ -1,7 +1,7 @@
 class ServerToClientPeep {
-  constructor(id, infected) { //+ last player's move?
-    this.id = id;
+  constructor(infected, enemyMove) { //+ last player's move?
     this.infected = infected;
+    this.enemyMove = enemyMove;
   }
 }
 

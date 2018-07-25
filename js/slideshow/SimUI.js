@@ -16,11 +16,11 @@ function SimUI(container, color){
 	startButton.onclick = function(event){
 		publish("sound/button");
 		if(!Simulations.inProgress){
-			//BUG?: Guaranteed to finish AI turn before calcs?
-			Simulations.enemy_turn();
 			Simulations.IS_RUNNING = true;
 			Simulations.requestStart = true;
 			publish("sim/start");
+			//slideshow.gotoChapter("BB");
+
 		}
 	};
 	_stopPropButton(startButton);

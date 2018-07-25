@@ -8,6 +8,8 @@ NB: While 'Sim' is used in such a way to allow for multiple sims running at once
 I have made an attempt to refactor things into the overall Simulations class, but much still remains.
 This makes for some untidy, but semantically sound code.
 
+
+TODO: Remove old game logic still in this class & others on client side
 ******************************/
 
 
@@ -21,9 +23,9 @@ function Simulations(){
 	Simulations.PERCENTAGE_INFECTED = 50;
 	//TODO TODO: In Slideshow.js, do a wait for serverResponse to have value, then set serverResponse to null again.
 	Simulations.awaitingResponse = false;
+	self.recievedConfig = null;
 
 	parseEvent = function(message){
-		console.log("message recieved");
 		console.log(message);
 		try{
 			message = JSON.parse(message.data);
@@ -31,13 +33,24 @@ function Simulations(){
 		catch(err){
 			console.log("Can't parse JSON:"+message.data);
 		}
-		awaitingResponse = false;
 		console.log(message.status);
 		switch(message.status){
 			case "CONFIG_TOKEN":
-				console.log(message.payload);
-				self.add(message.payload, true);
+				self.recievedConfig = message.payload;
+				console.log(self.recievedConfig);
+				Simulations.awaitingResponse = false;
 				break;
+			case "DEFERRED_START_TOKEN":
+				console.log("FIRST Waiting for P2...");
+				//TODO: implement waiting?
+				break;
+			case "UPDATE_STATE_TOKEN":
+				console.log("P2 Moves Recieved.");
+				Simulations.updateState(message.payload);
+				break;
+			case "GAME_END_TOKEN":
+					Simulations.gameOver();
+					break;
 		}
 	}
 	self.serverSetup = function(){
@@ -60,9 +73,21 @@ function Simulations(){
 	}
 
 	//Sends request to server, then sets awaiting response flag to true, to halt certain other parts of code until the config is returned.
-	Simulations.getConfig = function(){
+	Simulations.requestConfig = function(){
 		Simulations.sendServerMessage(new Message(null,"NEW_GAME_TOKEN"));
-		awaitingResponse = true;
+		Simulations.awaitingResponse = true;
+	}
+
+	Simulations.getConfig = function(){
+		//TODO: Implement waiting!!
+		console.log("WAITING TEST");
+		console.log("FINISHED WAIT");
+		console.log(self.recievedConfig);
+		return self.recievedConfig;
+	}
+
+	Simulations.gameOver = function(){
+
 	}
 
 	// Clear All Sims
@@ -81,47 +106,65 @@ function Simulations(){
 
 	// Add Sims
 	self.add = function(config){
-		console.log(config);
 		config = cloneObject(config);
 		config.container = self;
 		var sim = new Sim(config);
-		console.log(sim);
 		self.dom.appendChild(sim.canvas);
 		self.sims.push(sim);
-		console.log(self.sims);
 	};
 
-	self.endRound = function(){
-		Simulations.IS_RUNNING = false;
-		publish("sim/round_over");
-		Simulations.inProgress = false;
-	}
-
 	self.beginRound = function(){
+		Simulations.awaitingResponse = true;
 		Simulations.requestStart = false;
 		Simulations.inProgress = true;
-		var remainingSims = self.sims.length;
 			// Step all sims!
 			self.sims.forEach(function(sim){
-				Simulations.sendServerMessage(sim.formatPeeps());
-				setTimeout(function(){
-					sim.nextStep();
-					remainingSims--;
-					if (remainingSims == 0){
-						setTimeout(function(){
-							sim.calculatePercentage();
-							self.endRound();
-							console.log(sim);
-						},500);
-					}
-				},333);
+
+				//Sends moves to the server and waits for a response
+				Simulations.sendServerMessage(new Message(sim.formatPeeps(), "SUBMIT_MOVES_TOKEN"));
+				Simulations.waitForServerMoves(sim);
 			});
 	}
 
-	Simulations.enemy_turn = function(){
-		//while(waitingForMessage){
-		console.log("*tumbleweed*");
-		//}
+	Simulations.waitForServerMoves = function(sim){
+			//TODO: change round timings based on server
+			if (!Simulations.awaitingResponse){
+					Simulations.IS_RUNNING = false;
+					publish("sim/round_over");
+					Simulations.inProgress = false;
+			}
+			else{
+				console.log("Still Waiting for P2...");
+				var testo = setTimeout(Simulations.waitForServerMoves, 1000, sim);
+			}
+	}
+
+	//Updates the client variables to reflect the enemy's turn and subsequent infections.
+	Simulations.updateState = function(gameState){
+		var updatedPeeps = gameState[0];
+		var enemyMoves = gameState[1];
+		self.sims.forEach(function(sim){
+			var peepsList = sim.peeps;
+			if (peepsList.length !== updatedPeeps.length){
+				console.log("ERR! DIFFERRING NUMBER OF PEEPS!");
+			}
+			console.log(peepsList);
+			for (i=0; i<peepsList.length; i++){
+				console.log(peepsList[i]);
+				sim.removeOrbitConnection(peepsList[i], false);
+				if(updatedPeeps[i] == 1){
+					peepsList[i].isPastThreshold = true;
+				}
+				else{ peepsList[i].isPastThreshold = false; }
+			}
+			enemyMoves.forEach(function(move){
+				sim.addOrbitConnection(peepsList[move], false);
+			});
+			sim.nextStep();
+			sim.calculatePercentage();
+		});
+		Simulations.awaitingResponse = false;
+		console.log("READY TO GO");
 	}
 
 	// Update
@@ -133,8 +176,8 @@ function Simulations(){
 		// Update all sims
 		self.sims.forEach(function(sim){
 			sim.update();
-		});
 
+		});
 	};
 
 	// Draw
@@ -196,7 +239,6 @@ function Sim(config){
 	var self = this;
 	self.config = config;
 	self.networkConfig = cloneObject(config.network);
-	console.log(self.networkConfig);
 	self.container = config.container;
 	self.options = config.options || {};
 
@@ -249,12 +291,14 @@ function Sim(config){
 	}
 
 	//TODO: Change 'aiorbits' when multiplayer properly implemented
-	//NB: IDs for each peep isn't strictly necessary, but is nice to have to prevent potential insidious bugs, helps debugging, or help expand on this one day.
+	//This returns the ID for each orbit. If node has 2 orbits, will appear twice, etc.
 	self.formatPeeps = function(){
 		var formattedPeeps = []
 		self.peeps.forEach(function(peep){
-			var formattedPeep = new ClientToServerPeep(peep.id, peep.playerOrbits.length);
-			formattedPeeps.push(formattedPeep);
+			//TODO: are the IDs the same on the server?
+			for(i=0; i<peep.playerOrbits.length; i++){
+				formattedPeeps.push(peep.id);
+			}
 		});
 		return formattedPeeps;
 	}
@@ -615,7 +659,7 @@ function Sim(config){
 	self.calculatePercentage = function(){
 		var totalInfected = 0;
 		self.peeps.forEach(function(peep){
-			if (peep.infected){
+			if (peep.isPastThreshold){
 				totalInfected++;
 			}
 		});
@@ -755,12 +799,34 @@ function Sim(config){
 		return connection;
 	};
 
-	//Do I make invisible link? Would be hard to cut...
-	//It can't be this simple...
+	self.orbitStartPosition = function(target, isPlayer){
+		var playerOrbitLength = target.playerOrbits.length;
+		var enemyOrbitLength = target.aiOrbits.length;
+		//+1 to represent newest addition, also avoids divide by zero later
+		var totalLength = 1 + playerOrbitLength + enemyOrbitLength;
+		if (totalLength == 2){
+			var existingNodeLocation = (playerOrbitLength == 1 ? target.playerOrbits[0].a : target.aiOrbits[0].a);
+			return 3.142 + existingNodeLocation;
+		}
+		var counter = 0;
+		for(; counter < playerOrbitLength; counter++ ){
+			//places each orbit equally around the peep
+			target.playerOrbits[counter].a = 3.142 - (6.284 * counter / totalLength);
+		}
+		var returnValue = 3.142 - (6.284 * counter / totalLength);
+		counter++;
+		//calculate this in the middle, as in between the two players' peeps, the middle peep can justifiably be either player's.
+		for(; counter < totalLength; counter++ ){
+			//places each orbit equally around the peep
+			target.aiOrbits[counter - (playerOrbitLength + 1)].a = 3.142 - (6.284 * counter / totalLength);
+		}
+		return returnValue;
+	}
+
 	self.addOrbitConnection = function(target, isPlayer){
 		var orbiter = {
 	    elt: null
-	    ,a: 3.142         // in radian. original position. pi=north
+	    ,a:  self.orbitStartPosition(target, isPlayer)        // in radian. original position. pi=north
 	    ,r: 45         // radius
 	    ,da: 0.05     // in radian. speed of orbit
 	    ,x: 0
@@ -776,12 +842,13 @@ function Sim(config){
 		else target.aiOrbits.push(orbiter);
 	}
 
-
+	//removes one orbits if player, removes all if enemy
+	//this is because player can only change one at a time, but we need to clear all enemy tokens to show the new state.
 	self.removeOrbitConnection = function(target, isPlayer){
 		if(isPlayer){
 			target.playerOrbits.pop();
 		}
-		else target.aiOrbits.pop();
+		else target.aiOrbits = [];
 	}
 
 

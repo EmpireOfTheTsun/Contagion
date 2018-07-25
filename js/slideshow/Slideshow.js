@@ -32,7 +32,7 @@ function Slideshow(){
 		//Does this early to prevent waiting later on.
 		// >5 to prevent it happening on load. TODO: take this out when refactored.
 		if (index > 5){
-			Simulations.getConfig();
+			Simulations.requestConfig();
 		}
 
 		// Wait for transition to finish!
@@ -43,6 +43,9 @@ function Slideshow(){
 		self.slideIndex = index;
 		var isFirstSlide = (self.currentSlide==null);
 		var slide = SLIDES[self.slideIndex];
+		console.log(SLIDES);
+		console.log(index);
+		console.log(slide);
 
 		// Clear?
 		var _delayNewSlide = 0;
@@ -108,6 +111,7 @@ function Slideshow(){
 
 			// Add stuff
 			slide.add = slide.add || [];
+			console.log(slide.add);
 			var _delayAdd = ((slide.remove.length + slide.move.length)>0) ? _delay : 0;
 			_setTimeout(function(){
 				var withFade = ((slide.remove.length + slide.move.length)>0);
@@ -118,20 +122,24 @@ function Slideshow(){
 							self.boxes.add(childConfig, withFade);
 							break;
 						case "sim":
+						console.log("SIM DETECTED");
 							hasSim = true;
 							if(childConfig.ONLY_IF_IT_DOESNT_ALREADY_EXIST
 								&& self.simulations.sims.length>0){
 								// then nothing
 							}else{
-								console.log("TESTEST")
 								self.simulations.add(childConfig, withFade);
 							}
 							break;
 					}
 				});
-				while (Simulations.awaitingResponse){
+			//	while (Simulations.awaitingResponse){
 					//wait for config options from server before continuing.
-					console.log("waiting...");
+					//TODO: does this work?
+					//console.log("waiting...");
+				//}
+				if (index > 5){
+					self.simulations.add(Simulations.getConfig(), true);
 				}
 				//hmmmmm i COULD fix it here but that would make for confusing code TODO aaa
 
