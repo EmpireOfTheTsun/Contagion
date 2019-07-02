@@ -5,8 +5,6 @@ NETWORK_CONFIGS.Xoffset = 0//75;//-100;
 NETWORK_CONFIGS.Yoffset = 0//150;//-25;
 const csv=require('csvtojson');
 Server = require('./server.js');
-console.log(Server);
-console.log(Server.NeutralMode);
 const uuidv4 = require('uuid/v4');
 
 // NETWORK_CONFIGS.push({

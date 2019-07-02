@@ -1,4 +1,5 @@
-//////NOT ME
+console.log("Server starting!");
+
 //need nodeJS and uuid on the server
 //Use v4 as it is random and therefore hard to predict
 //If we want user accounts, perhaps v3 or v5 would be better, as it produces reliable values based on names.
@@ -10,7 +11,8 @@ var express = require("express");
 var nodemailer = require('nodemailer');
 var app = express();
 var PORT = process.env.PORT || 5000;
-app.use(express.static(__dirname + "/../../"));
+app.use(express.static(__dirname + "/"));
+console.log(app);
 
 //Setup mailing to alert if there is a problem with the database
 var transporter = nodemailer.createTransport({
@@ -22,11 +24,18 @@ var transporter = nodemailer.createTransport({
 });
 
 var server = http.createServer(app);
+console.log(server);
 server.listen(PORT);
+
+var host = server.address().address;
+var port = server.address().port;
+console.log('running at http://' + host + ':' + port);
+
 app.listen(8082, function () {
   console.log('Example app listening on port 8082!');
 })
 const wss = new WebSocketServer({ server: server });
+
 
 const { Client } = require('pg');
 const client = new Client({

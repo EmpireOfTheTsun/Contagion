@@ -21,11 +21,12 @@ function Simulations(){
 	Simulations.PreviousMoves = [];
 	Simulations.TutorialMode = true; //Defaults to true, quickly changes to false if server detects we want to play a game
 
-	Simulations.ServerLocation = "wss://stark-atoll-77422.herokuapp.com/";
-	//Simulations.ServerLocation = "wss://127.0.0.1:124";
+	//Simulations.ServerLocation = "wss://stark-atoll-77422.herokuapp.com/";
+	Simulations.ServerLocation = "wss://127.0.0.1:8082";
 
 
 	parseEvent = function(message){
+		console.log("wowee"+message);
 		try{
 			message = JSON.parse(message.data);
 		}

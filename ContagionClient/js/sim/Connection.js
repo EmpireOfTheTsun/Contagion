@@ -57,7 +57,10 @@ function Connection(config){
 
 		// DRAW CONTAGION DOT
 		if(self.contagionDot){
-			var infectedFrame = self.sim.options.infectedFrame || 1;
+			var infectedFrame = self.sim.options.infectedFrame || 3;
+			if (self.contagionDot.playerInfection){
+				infectedFrame = 4;
+			}
 			self.dotSprite.x = self.contagionDot.x;
 			self.dotSprite.y = self.contagionDot.y;
 			self.dotSprite.gotoFrame(infectedFrame);
@@ -99,26 +102,42 @@ function Connection(config){
 
 		// Infection?
 		var cFrom, cTo;
-		if(self.from.infected && (!self.to.infected && self.to.isPastThreshold)){
-			cFrom = self.from;
-			cTo = self.to;
-			//past threshold = infect. before threshold = no infect
-		} //do the infecting here BUT you gotta retain the state... OR Maybe have a special edge if they both infect each other?
-		//Also gotta ensure that all the calcs are done BEFORE any node changes. Maybe solving this will solve above?
-		//How can we get connections to communicate?
-		if(self.to.infected && (!self.from.infected && self.from.isPastThreshold)){
-			cFrom = self.to;
-			cTo = self.from;
+		console.log(self.from.infected);
+		console.log(self.to.isPastThreshold);
+		var isPlayerInfection = false;
+		if (!self.from.neutral){ //Neutral states shouldn't be able to infect anything
+			if(self.from.infected && ((!self.to.infected || self.to.neutral) && self.to.isPastThreshold)){
+				cFrom = self.from;
+				cTo = self.to;
+				isPlayerInfection = true;
+				//past threshold = infect. before threshold = no infect
+			}
+			else if(self.to.infected && ((!self.from.infected || self.from.neutral) && self.from.isPastThreshold)){
+				cFrom = self.to;
+				cTo = self.from;
+				isPlayerInfection = true;
+
+			}
+			else if(!self.from.infected && (self.to.infected && !self.to.isPastThreshold)){
+				cFrom = self.from;
+				cTo = self.to;
+			}
+			else if(!self.to.infected && (self.from.infected && !self.from.isPastThreshold)){
+				cFrom = self.to;
+				cTo = self.from;
+			}
 		}
 
 		// boop!
 		if(cFrom && cTo){
+			console.log("22INFCIRCLE "+cFrom);
 
 			// ANIMATE IT
 			cFrom = { x:cFrom.x, y:cFrom.y };
 			cTo = { x:cTo.x, y:cTo.y };
 			tweenPosition(cFrom, cTo, function(point){
 				self.contagionDot = point;
+				self.contagionDot.playerInfection = isPlayerInfection;
 			}, easeLinear);
 
 			// Then, goodbye later
