@@ -185,7 +185,7 @@ function Peep(config){
 
 		// Circle
 		var infectedFrame = 4;//self.sim.options.infectedFrame || 1; //this is the player colour
-		var enemyFrame = 3;
+		var enemyFrame = 1;
 		var neutralFrame = 0;
 
 		var infectedColor = PEEP_COLORS[infectedFrame];
@@ -264,7 +264,7 @@ function Peep(config){
 			ctx.save();
 			ctx.beginPath();
 			ctx.arc(orbiter.x, orbiter.y, 9, 0, 10);
-			ctx.fillStyle="#1199BB";
+			ctx.fillStyle="#FF1111"; //PEEP_COLORS analog
 			ctx.fill();
 			ctx.restore();
 
@@ -347,7 +347,7 @@ function Peep(config){
 				var labelNum = self.numInfectedFriends+"/"+self.numFriends;
 				ctx.fillText(labelNum, barWidth/2, 0);
 				*/
-				ctx.fillStyle = "#1199BB";
+				ctx.fillStyle = "#FF3333"; //PEEP_COLORS analogue
 
 
 			}else{

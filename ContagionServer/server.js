@@ -1,5 +1,5 @@
 console.log("Server starting!");
-
+var localMode = true;
 //need nodeJS and uuid on the server
 //Use v4 as it is random and therefore hard to predict
 //If we want user accounts, perhaps v3 or v5 would be better, as it produces reliable values based on names.
@@ -36,14 +36,15 @@ app.listen(8082, function () {
 })
 const wss = new WebSocketServer({ server: server });
 
-
-const { Client } = require('pg');
-const client = new Client({
-  connectionString: process.env.DATABASE_URL,
-  ssl: true,
-});
-console.log(process.env.DATABASE_URL);
-client.connect();
+if(!localMode){
+  const { Client } = require('pg');
+  const client = new Client({
+    connectionString: process.env.DATABASE_URL,
+    ssl: true,
+  });
+  console.log(process.env.DATABASE_URL);
+  client.connect();
+}
 
 var clone = require('clone');
 serverConfigs = require('./NetworkConfigurations.js');

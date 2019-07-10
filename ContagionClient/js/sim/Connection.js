@@ -57,7 +57,7 @@ function Connection(config){
 
 		// DRAW CONTAGION DOT
 		if(self.contagionDot){
-			var infectedFrame = self.sim.options.infectedFrame || 3;
+			var infectedFrame = self.sim.options.infectedFrame || 1;
 			if (self.contagionDot.playerInfection){
 				infectedFrame = 4;
 			}
@@ -102,8 +102,10 @@ function Connection(config){
 
 		// Infection?
 		var cFrom, cTo;
-		console.log(self.from.infected);
+		console.log("----");
+		console.log(self.from.isPastThreshold);
 		console.log(self.to.isPastThreshold);
+		console.log("----");
 		var isPlayerInfection = false;
 		if (!self.from.neutral){ //Neutral states shouldn't be able to infect anything
 			if(self.from.infected && ((!self.to.infected || self.to.neutral) && self.to.isPastThreshold)){
@@ -116,13 +118,12 @@ function Connection(config){
 				cFrom = self.to;
 				cTo = self.from;
 				isPlayerInfection = true;
-
 			}
-			else if(!self.from.infected && (self.to.infected && !self.to.isPastThreshold)){
+			else if(!self.from.infected && (self.to.infected && self.to.isPastThreshold == false)){
 				cFrom = self.from;
 				cTo = self.to;
 			}
-			else if(!self.to.infected && (self.from.infected && !self.from.isPastThreshold)){
+			else if(!self.to.infected && (self.from.infected && self.from.isPastThreshold == false)){
 				cFrom = self.to;
 				cTo = self.from;
 			}

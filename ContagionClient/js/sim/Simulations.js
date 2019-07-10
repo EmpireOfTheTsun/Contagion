@@ -22,7 +22,7 @@ function Simulations(){
 	Simulations.TutorialMode = true; //Defaults to true, quickly changes to false if server detects we want to play a game
 
 	//Simulations.ServerLocation = "wss://stark-atoll-77422.herokuapp.com/";
-	Simulations.ServerLocation = "wss://127.0.0.1:8082";
+	Simulations.ServerLocation = "ws://127.0.0.1:5000";
 
 
 	parseEvent = function(message){
@@ -128,7 +128,6 @@ function Simulations(){
 		var Xoffset = 75;
 		var Yoffset = 150;
 		Xscale = $("#simulations_container").clientWidth - (2*Xoffset); //subtration to provide symmetry of gap for both sides
-		var dank = $("#simulations_container");
 		Yscale = $("#simulations_container").clientHeight - (1.2*Yoffset); //don't need the symmetry vertically, since it's asymmetric by design. Want some empty space at bottom though
 
 		peeps.forEach(function(peep){
