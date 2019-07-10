@@ -62,7 +62,9 @@ window.Modal = {
 
 		// Show in large box
 		Modal.show(true);
-
+		if (thing == "endgame"){
+			Simulations.Chart = buildChart(Simulations.ScoreList);
+		}
 	}
 };
 
@@ -96,3 +98,68 @@ $("#modal_content_container").ontouchstart = function(event){
 $("#modal_content_container").ontouchmove = function(event){
 	event.stopPropagation();
 };
+
+
+function buildChart(playerScore, enemyScore){
+  var ctx = document.getElementById('scoreChart').getContext('2d');
+
+  const colors = { // hex codes for various colours if you want to change without much hassle
+    green: {
+      fill: '#e0eadf',
+      stroke: '#5eb84d',
+    },
+    red: {
+      fill: '#ff2222',
+      stroke: '#ff5555',
+    },
+  };
+
+  var myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [1,2,3,4,5,6,7,8,9,10], //x-axis labels for the rounds
+      datasets: [{
+        label: "Your Score",
+        fill: true,
+        backgroundColor: colors.green.fill,
+        pointBackgroundColor: colors.green.stroke,
+        borderColor: colors.green.stroke,
+        pointHighlightStroke: colors.green.stroke,
+        borderCapStyle: 'butt',
+        data: playerScore,
+
+      }, {
+        label: "Opponent Score",
+        fill: true,
+        backgroundColor: colors.red.fill,
+        pointBackgroundColor: colors.red.stroke,
+        borderColor: colors.red.stroke,
+        pointHighlightStroke: colors.red.stroke,
+        borderCapStyle: 'butt',
+        data: enemyScore,
+      }]
+    },
+    options: {
+      responsive: false, //Prevents resiving to keep graph display and format consistent
+      scales: {
+        yAxes: [{
+          scaleLabel:{
+            display:true,
+            labelString: "Score" //y-axis label
+          },
+          stacked: false, //Causes the values to be added on top of each other
+        }],
+        xAxes: [{
+          scaleLabel:{
+            display:true,
+            labelString: "Round" //x-axis label
+          }
+        }]
+      },
+      animation: {
+        duration: 750,
+      },
+    }
+  });
+  return myChart;
+}

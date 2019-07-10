@@ -22,12 +22,13 @@ function Simulations(){
 	Simulations.TutorialMode = true; //Defaults to true, quickly changes to false if server detects we want to play a game
 	Simulations.EmergencyAIMode = false;
 	Simulations.LocalMode = false;
+	Simulations.Chart = null;
 
 	if (Simulations.LocalMode){
 		Simulations.ServerLocation = "ws://127.0.0.1:5000";
 	}
 	else{
-		Simulations.ServerLocation = "wss://stark-atoll-77422.herokuapp.com/";		
+		Simulations.ServerLocation = "wss://stark-atoll-77422.herokuapp.com/";
 	}
 
 
@@ -216,6 +217,7 @@ function Simulations(){
 		Simulations.PreviousMoves = [];
 		Simulations.Score = 0;
 		Simulations.PERCENTAGE_INFECTED = 0;
+		Simulations.Chart = 0;
 		//publish("sim/round_over"); //TODO: i recently commented this out. may fix problems?
 		slideshow.gotoChapter("Strategy");
 	}

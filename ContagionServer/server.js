@@ -69,10 +69,10 @@ Server.databaseFailure = function(err, game, query){
   //Makes players think the other disconnected
   //Suppress errors if either player cannot be reached.
   try{
-    Server.sendClientMessage(new Message(["disconnect", game.playerOneScore], "GAME_END_TOKEN"), game.playerOne);
+    Server.sendResults(1, game, "disconnect");
   } catch(err){}
   try{
-    Server.sendClientMessage(new Message(["disconnect", game.playerTwoScore], "GAME_END_TOKEN"), game.playerTwo);
+    Server.sendResults(2, game, "disconnect");
   } catch(err){}
 
   game.killGame(false, game);
@@ -143,6 +143,8 @@ class GameState {
     this.prevAiMoves = [];
     this.gameStartTime = Date.now();
     this.aiCheckTimer = null;
+    this.playerOneScoreList = [];
+    this.playerTwoScoreList = [];
     //
   }
 
@@ -288,7 +290,7 @@ class GameState {
     if (now - game.playerOneLastHeartbeat > Server.heartAttackTime){
       console.log("Heart attack1!");
       try{
-        Server.sendClientMessage(new Message(["disconnect", game.playerTwoScore], "GAME_END_TOKEN"), game.playerTwo);
+        Server.sendResults(2, game, "disconnect");
       }
       catch(e){
         console.log("Error when sending gameend msg: "+e);
@@ -298,7 +300,7 @@ class GameState {
     if(game.playerTwo !== "AI" && game.playerTwo !== null && now-game.playerTwoLastHeartbeat > Server.heartAttackTime){
       console.log("Heart attack2!");
       try{
-        Server.sendClientMessage(new Message(["disconnect", game.playerOneScore], "GAME_END_TOKEN"), game.playerOne);
+        Server.sendResults(1, game, "disconnect");
       }
       catch(e){
         console.log("Error when sending gameend msg: "+e);
@@ -317,14 +319,13 @@ class GameState {
   GameState.prototype.killGame = async(naturalEnd, game, causer) => {
     ("game over");
     if(causer != null){
-      if (causer == "p1"){
-        winner = game.playerTwo;
-      }
-      else if(causer == "p2"){
-        winner = game.playerOne;
-      }
       try{
-        Server.sendClientMessage(new Message(["disconnect", 0], "GAME_END_TOKEN"), winner);
+        if (causer == "p1"){
+          Server.sendResults(2, game, "disconnect");
+        }
+        else if(causer == "p2"){
+          Server.sendResults(2, game, "disconnect");
+        }
       }
       catch(err){} //Suppresses error if other player is an AI
       if(causer != "p1" && causer != "p2"){
@@ -334,41 +335,39 @@ class GameState {
     }
     if (naturalEnd){
       //send score, etc.
-      var winner;
-      var loser;
       console.log("P1SCORE: "+game.playerOneScore);
       console.log("P2SCORE: "+game.playerTwoScore);
       if (game.playerTwo == "AI"){
         if (game.playerOneScore > game.playerTwoScore){
-          Server.sendClientMessage(new Message(["win", game.playerOneScore], "GAME_END_TOKEN"), game.playerOne);
+          Server.sendResults(1, game, "win");
         }
         else if (game.playerOneScore < game.playerTwoScore){
-          Server.sendClientMessage(new Message(["lose", game.playerOneScore], "GAME_END_TOKEN"), game.playerOne);
+          Server.sendResults(1, game, "lose");
         }
         else{
-          Server.sendClientMessage(new Message(["draw", game.playerOneScore], "GAME_END_TOKEN"), game.playerOne);
+          Server.sendResults(1, game, "draw");
         }
       }
       else{
         if(game.playerOneScore > game.playerTwoScore){
-          winner = game.playerOne;
-          loser = game.playerTwo;
+          Server.sendResults(1, game, "win");
+          Server.sendResults(2, game, "lose");
         }
         else if (game.playerOneScore < game.playerTwoScore){
-          winner = game.playerTwo;
-          loser = game.playerOne;
+          Server.sendResults(1, game, "lose");
+          Server.sendResults(2, game, "win");
         }
         else{
-          Server.sendClientMessage(new Message(["draw", game.playerOneScore], "GAME_END_TOKEN"), game.playerOne);
-          Server.sendClientMessage(new Message(["draw", game.playerTwoScore], "GAME_END_TOKEN"), game.playerTwo);
+          Server.sendResults(1, game, "draw");
+          Server.sendResults(2, game, "draw");
+        }
           var index = Server.CurrentGames.indexOf(this);
           clearInterval(game.timer);
           Server.CurrentGames.splice(index, 1);
           console.log("no games:"+Server.CurrentGames.length);
           return;
         }
-        Server.sendClientMessage(new Message(["win", winner.score], "GAME_END_TOKEN"), winner);
-        Server.sendClientMessage(new Message(["lose", loser.score], "GAME_END_TOKEN"), loser);
+
       }
     }
     clearInterval(game.timer);
@@ -414,7 +413,9 @@ class GameState {
     var p1additionalScore = playerOnePeepsCount * 10;
     var p2additionalScore = playerTwoPeepsCount * 10;
     this.playerOneScore += p1additionalScore;
+    this.playerOneScoreList.push(this.playerOneScore);
     this.playerTwoScore += p2additionalScore;
+    this.playerTwoScoreList.push(this.playerTwoScore);
   }
 
   //Sends the clients an array of length equal to the number of peeps
@@ -833,12 +834,12 @@ class GameState {
     console.log("!!!!OUTTATIME: "+isPlayerOne);
     if(!Server.demoMode){
       if (isPlayerOne){
-        Server.sendClientMessage(new Message(["time", this.playerOneScore], "GAME_END_TOKEN"), this.playerOne);
-        Server.sendClientMessage(new Message(["disconnect", this.playerTwoScore], "GAME_END_TOKEN"), this.playerTwo);
+        Server.sendResults(1, game, "time");
+        Server.sendResults(2, game, "disconnect");
       }
       else{
-        Server.sendClientMessage(new Message(["disconnect", this.playerOneScore], "GAME_END_TOKEN"), this.playerOne);
-        Server.sendClientMessage(new Message(["time", this.playerTwoScore], "GAME_END_TOKEN"), this.playerTwo);
+        Server.sendResults(1, game, "time");
+        Server.sendResults(2, game, "disconnect");
       }
       this.killGame(false, this);
     }
@@ -982,6 +983,25 @@ Server.newGame = function(ws){
     game.playerTwoTimeOffset = Date.now() - game.gameStartTime;
     Server.sendClientMessage(new Message(config, "CONFIG_TOKEN"), ws);
     Server.startTimer(game, 0, 61, false);
+  }
+}
+
+Server.sendResults = function(playerNo, game, result){
+  try{
+    if (playerNo == 1){
+      Server.sendClientMessage(new Message([result, game.playerOneScoreList, game.playerTwoScoreList], "GAME_END_TOKEN"), game.playerOne);
+    }
+    else if (playerNo == 2){
+      Server.sendClientMessage(new Message([result, game.playerTwoScoreList, game.playerTwoScoreList], "GAME_END_TOKEN"), game.playerTwo);
+
+    }
+    else{
+      console.log("ERROR WHEN SENDING RESULTS!");
+    }
+  }
+  catch(err){
+    console.log("ERROR WHEN SENDING RESULTS2!");
+    console.log(err);
   }
 }
 
