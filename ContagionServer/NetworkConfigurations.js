@@ -1,3 +1,5 @@
+var LocalMode = true;
+
 NETWORK_CONFIGS = [];
 NETWORK_CONFIGS.Xscale = 1//1200; //Input topologies have x/y coordinates between 0 and 1. This scales it to a typical player's screen.
 NETWORK_CONFIGS.Yscale = 1//700;
@@ -59,8 +61,17 @@ processConfigs = async(rawPeeps, rawConnections) =>{
 
 //TODO expand this to do multiple files (ez, just get directory, get all files, do for each file...)
 async function loadConfigs() {
-	const csvPeeps='ContagionServer/Config_Files/game_test_net_pos.csv';
-	const csvConnections='ContagionServer/Config_Files/game_test_net_edge_list.csv';
+	var csvPeeps=null;
+	var csvConnections=null;
+	if (!LocalMode){
+		csvPeeps='ContagionServer/Config_Files/game_test_net_pos.csv';
+		csvConnections='ContagionServer/Config_Files/game_test_net_edge_list.csv';
+	}
+	else{ //depending where it's started from, can be already inside ContagionServer
+	console.log("oofie");
+		csvPeeps='Config_Files/game_test_net_pos.csv';
+		csvConnections='Config_Files/game_test_net_edge_list.csv';
+	}
 
 	var rawPeeps = null;
 	var connections = null;

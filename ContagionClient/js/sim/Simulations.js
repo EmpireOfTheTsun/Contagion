@@ -6,6 +6,10 @@ I have made an attempt to refactor things into the overall Simulations class, bu
 
 //SIM DELARED AT 167
 function Simulations(){
+	Simulations.LocalMode = true;
+
+
+
 	var self = this;
 	self.dom = $("#simulations");
 
@@ -20,9 +24,9 @@ function Simulations(){
 	Simulations.Score = 0;
 	Simulations.PreviousMoves = [];
 	Simulations.TutorialMode = true; //Defaults to true, quickly changes to false if server detects we want to play a game
-	Simulations.EmergencyAIMode = false;
-	Simulations.LocalMode = false;
+	Simulations.EmergencyAIMode = true;
 	Simulations.Chart = null;
+	Simulations.ScoreLists = [];
 
 	if (Simulations.LocalMode){
 		Simulations.ServerLocation = "ws://127.0.0.1:5000";
@@ -176,7 +180,7 @@ function Simulations(){
 
 	Simulations.gameOver = function(payload){
 		console.log("GAMEOVER");
-		console.log(payload);
+		console.log(payload); // [result, myscores, theirscores]
 		var verdict = payload[0]; //"win" "lose" or "draw"
 		if (payload[1] != null){
 			Simulations.Score = payload[1];
@@ -202,11 +206,14 @@ function Simulations(){
 			self.sims[0].lose();
 		}
 		//Draw ("tie") to prevent confusion with the draw func
-		else {
+		else if (verdict == "tie"){
 			 Simulations.WinState = 1;
 			 self.sims[0].tie();
 		}
-
+		else{
+			console.log("ERR UNKNOWN OUTCOME!");
+		}
+		Simulations.ScoreLists = [payload[1],payload[2]];
 		setTimeout(Modal.showAll, 3000, "endgame");
 	}
 
@@ -216,6 +223,7 @@ function Simulations(){
 		SimUI.RoundNumber = 0;
 		Simulations.PreviousMoves = [];
 		Simulations.Score = 0;
+		Simulations.ScoreLists = [];
 		Simulations.PERCENTAGE_INFECTED = 0;
 		Simulations.Chart = 0;
 		//publish("sim/round_over"); //TODO: i recently commented this out. may fix problems?
@@ -277,6 +285,7 @@ function Simulations(){
 		config.container = self;
 		Simulations.WinState = -1;
 		Simulations.Score = 0;
+		Simulations.ScoreLists = [];
 		var sim = new Sim(config);
 		console.log(sim);
 		self.dom.appendChild(sim.canvas);

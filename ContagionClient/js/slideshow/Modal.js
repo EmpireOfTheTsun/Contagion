@@ -63,7 +63,7 @@ window.Modal = {
 		// Show in large box
 		Modal.show(true);
 		if (thing == "endgame"){
-			Simulations.Chart = buildChart(Simulations.ScoreList);
+			Simulations.Chart = buildChart(Simulations.ScoreLists);
 		}
 	}
 };

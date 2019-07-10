@@ -1,5 +1,7 @@
+
+Server.LocalMode = true; //CHANGE SETTING IN NETWORKCONFIGS // TODO:
 console.log("Server starting!");
-var localMode = true;
+
 //need nodeJS and uuid on the server
 //Use v4 as it is random and therefore hard to predict
 //If we want user accounts, perhaps v3 or v5 would be better, as it produces reliable values based on names.
@@ -27,7 +29,7 @@ server.listen(PORT);
 
 const wss = new WebSocketServer({ server: server });
 
-if(!localMode){
+if(!Server.LocalMode){
   const { Client } = require('pg');
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
@@ -104,7 +106,7 @@ function Server(){
   Server.CurrentGames = [];
   Server.WaitingGameConfig = null;
   Server.RoundLimit = 10;
-  Server.AiMode = false;
+  Server.AiMode = true;
   Server.InfectionMode = "majority";
   Server.AiStrategy = "random";//"SimpleGreedy";
   Server.TokenProtocol = "Incremental"; //"AtStart" or "Incremental"
@@ -361,14 +363,8 @@ class GameState {
           Server.sendResults(1, game, "draw");
           Server.sendResults(2, game, "draw");
         }
-          var index = Server.CurrentGames.indexOf(this);
-          clearInterval(game.timer);
-          Server.CurrentGames.splice(index, 1);
-          console.log("no games:"+Server.CurrentGames.length);
-          return;
-        }
-
       }
+
     }
     clearInterval(game.timer);
     clearTimeout(game.playerOneTimer);
