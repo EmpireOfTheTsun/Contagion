@@ -20,9 +20,15 @@ function Simulations(){
 	Simulations.Score = 0;
 	Simulations.PreviousMoves = [];
 	Simulations.TutorialMode = true; //Defaults to true, quickly changes to false if server detects we want to play a game
+	Simulations.EmergencyAIMode = false;
+	Simulations.LocalMode = false;
 
-	//Simulations.ServerLocation = "wss://stark-atoll-77422.herokuapp.com/";
-	Simulations.ServerLocation = "ws://127.0.0.1:5000";
+	if (Simulations.LocalMode){
+		Simulations.ServerLocation = "ws://127.0.0.1:5000";
+	}
+	else{
+		Simulations.ServerLocation = "wss://stark-atoll-77422.herokuapp.com/";		
+	}
 
 
 	parseEvent = function(message){
@@ -68,7 +74,7 @@ function Simulations(){
 		self.ws = new WebSocket(Simulations.ServerLocation);
 		self.ws.onopen = function (event) {
 		self.ws.send("Connection Recieved.");
-		setInterval(Simulations.heartbeat, 3000);
+		setInterval(Simulations.heartbeat, 250);
 		};
 		self.ws.onerror = function (err) {
 			console.log('err: ', err);
@@ -114,8 +120,12 @@ function Simulations(){
 	Simulations.requestConfig = function(){
 		if(Simulations.recievedConfig == null){
 			console.log("Config Requested");
-			Simulations.sendServerMessageOverride(new Message(null,"EMERGENCY_AI")); //aimode
-			//Simulations.sendServerMessage(new Message(null,"NEW_GAME_TOKEN"));
+			if(Simulations.EmergencyAIMode){
+				Simulations.sendServerMessageOverride(new Message(null,"EMERGENCY_AI")); //aimode
+			}
+			else{
+				Simulations.sendServerMessage(new Message(null,"NEW_GAME_TOKEN"));
+			}
 			Simulations.awaitingResponse = true;
 		}
 	}

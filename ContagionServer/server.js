@@ -11,8 +11,7 @@ var express = require("express");
 var nodemailer = require('nodemailer');
 var app = express();
 var PORT = process.env.PORT || 5000;
-app.use(express.static(__dirname + "/"));
-console.log(app);
+//app.use(express.static(__dirname + "/"));
 
 //Setup mailing to alert if there is a problem with the database
 var transporter = nodemailer.createTransport({
@@ -24,16 +23,8 @@ var transporter = nodemailer.createTransport({
 });
 
 var server = http.createServer(app);
-console.log(server);
 server.listen(PORT);
 
-var host = server.address().address;
-var port = server.address().port;
-console.log('running at http://' + host + ':' + port);
-
-app.listen(8082, function () {
-  console.log('Example app listening on port 8082!');
-})
 const wss = new WebSocketServer({ server: server });
 
 if(!localMode){
@@ -113,7 +104,7 @@ function Server(){
   Server.CurrentGames = [];
   Server.WaitingGameConfig = null;
   Server.RoundLimit = 10;
-  Server.AiMode = true;
+  Server.AiMode = false;
   Server.InfectionMode = "majority";
   Server.AiStrategy = "random";//"SimpleGreedy";
   Server.TokenProtocol = "Incremental"; //"AtStart" or "Incremental"
@@ -121,6 +112,8 @@ function Server(){
   Server.NeutralMode = true;
   Server.lastAlertTime = 0;
   Server.demoMode = true;
+  Server.heartbeatCheckFrequency = 100;
+  Server.heartAttackTime = 500;
 }
 Server();
 
@@ -146,7 +139,7 @@ class GameState {
     this.playerTwoTimeOffset = 10000000000 //large value for debug, should only appear if something has gone wrong.
     this.playerOneLastHeartbeat = Date.now();
     this.playerTwoLastHeartbeat = -1;
-    this.timer = setInterval(this.heartbeatHandler, 3000, this);
+    this.timer = setInterval(this.heartbeatHandler, Server.heartbeatCheckFrequency, this);
     this.prevAiMoves = [];
     this.gameStartTime = Date.now();
     this.aiCheckTimer = null;
@@ -292,7 +285,7 @@ class GameState {
 
   GameState.prototype.heartbeatHandler = function(game){
     var now = Date.now();
-    if (now - game.playerOneLastHeartbeat > 4000){
+    if (now - game.playerOneLastHeartbeat > Server.heartAttackTime){
       console.log("Heart attack1!");
       try{
         Server.sendClientMessage(new Message(["disconnect", game.playerTwoScore], "GAME_END_TOKEN"), game.playerTwo);
@@ -302,7 +295,7 @@ class GameState {
       }
       game.killGame(false, game);
     }
-    if(game.playerTwo !== "AI" && game.playerTwo !== null && now-game.playerTwoLastHeartbeat > 4000){
+    if(game.playerTwo !== "AI" && game.playerTwo !== null && now-game.playerTwoLastHeartbeat > Server.heartAttackTime){
       console.log("Heart attack2!");
       try{
         Server.sendClientMessage(new Message(["disconnect", game.playerOneScore], "GAME_END_TOKEN"), game.playerOne);
