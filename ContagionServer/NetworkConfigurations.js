@@ -59,8 +59,8 @@ processConfigs = async(rawPeeps, rawConnections) =>{
 
 //TODO expand this to do multiple files (ez, just get directory, get all files, do for each file...)
 async function loadConfigs() {
-	const csvPeeps='Config_Files/game_test_net_pos.csv';
-	const csvConnections='Config_Files/game_test_net_edge_list.csv';
+	const csvPeeps='ContagionServer/Config_Files/game_test_net_pos.csv';
+	const csvConnections='ContagionServer/Config_Files/game_test_net_edge_list.csv';
 
 	var rawPeeps = null;
 	var connections = null;
