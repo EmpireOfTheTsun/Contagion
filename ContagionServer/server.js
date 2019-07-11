@@ -274,6 +274,8 @@ class GameState {
   GameState.prototype.aiCheck = function(){
     var oneAI = this.playerOne == "AI";
     var twoAI = this.playerTwo == "AI";
+    console.log("AICHECK"+this.playerOne);
+    console.log(this.playerTwo);
     if (oneAI || twoAI){
       if (oneAI && twoAI){
         //both AI. kill game.
@@ -1067,7 +1069,7 @@ Server.ParseMessage = function(message, ws){
       Server.submitMoves(message.payload, ws);
       break;
     case "NEW_GAME_TOKEN":
-      Server.AiMode = false;
+      //Server.AiMode = false;
       Server.newGame(ws);
       break;
     case "EMERGENCY_AI":

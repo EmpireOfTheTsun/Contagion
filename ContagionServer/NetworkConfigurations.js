@@ -8,17 +8,10 @@ NETWORK_CONFIGS.Yoffset = 0//150;//-25;
 const csv=require('csvtojson');
 Server = require('./server.js');
 const uuidv4 = require('uuid/v4');
+const fs = require('fs');
 
-// NETWORK_CONFIGS.push({
-// 		"peeps":[[500,200,-1],[500,350,-1],[800,350,-1],[800,200,-1]],
-// 		"connections":[[0,1,1],[1,2,1],[2,3,1],[3,0,1]]
-// });
-// NETWORK_CONFIGS.push({
-// 		"peeps":[[500,200,-1],[500,350,-1],[650,450,-1],[800,350,-1],[800,200,-1],[650,100,-1]],
-// 		"connections":[[0,1,1],[1,2,1],[2,3,1],[3,4,1],[4,5,1],[5,0,1]]
-// });
 
-processConfigs = async(rawPeeps, rawConnections) =>{
+processConfig = async(rawPeeps, rawConnections) =>{
 	//validate input configs
 	if (rawPeeps.length % 2 !== 0){
 		console.log("ERR! Must be even number of peeps!");
@@ -39,15 +32,18 @@ processConfigs = async(rawPeeps, rawConnections) =>{
 			randomInfection.push(0);
 			randomInfection.push(1);
 		}
-		shuffle(randomInfection);
+		shuffle(randomInfection); //shuffles the list so the initial layout is random
 	}
 
 	var peepData = [];
 	var connectionData = [];
 
+	//Scales the x and y co-ordinates of the nodes to fit the container. This could possibly be implemented on client side.
 	for (var i=0; i<rawPeeps.length; i++){
 		peepData.push([(rawPeeps[i][0] * NETWORK_CONFIGS.Xscale) + NETWORK_CONFIGS.Xoffset, (rawPeeps[i][1] * NETWORK_CONFIGS.Yscale) + NETWORK_CONFIGS.Yoffset, randomInfection[i]]);
 	}
+
+	//Isn't this just recreating the list? This was from a while ago so not too sure if needed.
 	for (var i=0; i<rawConnections.length; i++){
 		connectionData.push(rawConnections[i]);
 	}
@@ -64,24 +60,36 @@ async function loadConfigs() {
 	var csvPeeps=null;
 	var csvConnections=null;
 	if (!LocalMode){
-		csvPeeps='ContagionServer/Config_Files/game_test_net_pos.csv';
-		csvConnections='ContagionServer/Config_Files/game_test_net_edge_list.csv';
+		csvPeepsDirectory='ContagionServer/Config_Files/';
 	}
 	else{ //depending where it's started from, can be already inside ContagionServer
 	console.log("oofie");
-		csvPeeps='Config_Files/game_test_net_pos.csv';
-		csvConnections='Config_Files/game_test_net_edge_list.csv';
+		csvPeepsDirectory='Config_Files/';
 	}
 
-	var rawPeeps = null;
-	var connections = null;
-	await csv({noheader:true, output:"csv"}).fromFile(csvPeeps).then((jsonObj) =>{
-		rawPeeps = jsonObj;
+	var topologies = [];
+	//from https://stackoverflow.com/questions/2727167/how-do-you-get-a-list-of-the-names-of-all-files-present-in-a-directory-in-node-j?rq=1
+	fs.readdirSync(csvPeepsDirectory).forEach(file => {
+			topologies.push(csvPeepsDirectory+file);
 	});
-	await csv({noheader:true, output:"csv"}).fromFile(csvConnections).then((jsonObj) =>{
-		connections = jsonObj;
-	});
-	processConfigs(rawPeeps, connections);
+	console.log("types="+topologies);
+
+	for (var i=0; i < topologies.length; i++){
+		var positionsPath = topologies[i]+"positions_"+i;
+		var edgesPath = topologies[i]+"edges_"+i;
+
+		var rawPeeps = null;
+		var connections = null;
+		await csv({noheader:true, output:"csv"}).fromFile(positionsPath).then((jsonObj) =>{
+			rawPeeps = jsonObj;
+		});
+		await csv({noheader:true, output:"csv"}).fromFile(positionsPath).then((jsonObj) =>{
+			connections = jsonObj;
+		});
+		processConfig(rawPeeps, connections);
+	}
+
+
 	console.log("ready");
 
 }

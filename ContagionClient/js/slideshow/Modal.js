@@ -63,7 +63,7 @@ window.Modal = {
 		// Show in large box
 		Modal.show(true);
 		if (thing == "endgame"){
-			Simulations.Chart = buildChart(Simulations.ScoreLists);
+			Simulations.Chart = buildChart(Simulations.ScoreLists[0], Simulations.ScoreLists[1]);
 		}
 	}
 };
@@ -101,7 +101,15 @@ $("#modal_content_container").ontouchmove = function(event){
 
 
 function buildChart(playerScore, enemyScore){
-  var ctx = document.getElementById('scoreChart').getContext('2d');
+	try{
+  	var ctx = document.getElementById('scorechart').getContext('2d');
+	}
+	catch(err){
+		setTimeout(buildChart, 500, playerScore, enemyScore);
+		console.log("CTX"+document.getElementById('scorechart'));
+		return;
+	}
+
 
   const colors = { // hex codes for various colours if you want to change without much hassle
     green: {
@@ -113,6 +121,8 @@ function buildChart(playerScore, enemyScore){
       stroke: '#ff5555',
     },
   };
+	console.log(playerScore);
+	console.log(enemyScore);
 
   var myChart = new Chart(ctx, {
     type: 'line',
@@ -120,7 +130,7 @@ function buildChart(playerScore, enemyScore){
       labels: [1,2,3,4,5,6,7,8,9,10], //x-axis labels for the rounds
       datasets: [{
         label: "Your Score",
-        fill: true,
+        fill: false,
         backgroundColor: colors.green.fill,
         pointBackgroundColor: colors.green.stroke,
         borderColor: colors.green.stroke,
@@ -130,7 +140,7 @@ function buildChart(playerScore, enemyScore){
 
       }, {
         label: "Opponent Score",
-        fill: true,
+        fill: false,
         backgroundColor: colors.red.fill,
         pointBackgroundColor: colors.red.stroke,
         borderColor: colors.red.stroke,

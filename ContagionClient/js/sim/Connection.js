@@ -102,10 +102,6 @@ function Connection(config){
 
 		// Infection?
 		var cFrom, cTo;
-		console.log("----");
-		console.log(self.from.isPastThreshold);
-		console.log(self.to.isPastThreshold);
-		console.log("----");
 		var isPlayerInfection = false;
 		if (!self.from.neutral){ //Neutral states shouldn't be able to infect anything
 			if(self.from.infected && ((!self.to.infected || self.to.neutral) && self.to.isPastThreshold)){
@@ -131,7 +127,6 @@ function Connection(config){
 
 		// boop!
 		if(cFrom && cTo){
-			console.log("22INFCIRCLE "+cFrom);
 
 			// ANIMATE IT
 			cFrom = { x:cFrom.x, y:cFrom.y };

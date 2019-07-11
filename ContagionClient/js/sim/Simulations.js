@@ -24,7 +24,7 @@ function Simulations(){
 	Simulations.Score = 0;
 	Simulations.PreviousMoves = [];
 	Simulations.TutorialMode = true; //Defaults to true, quickly changes to false if server detects we want to play a game
-	Simulations.EmergencyAIMode = true;
+	Simulations.EmergencyAIMode = false;
 	Simulations.Chart = null;
 	Simulations.ScoreLists = [];
 
@@ -37,7 +37,6 @@ function Simulations(){
 
 
 	parseEvent = function(message){
-		console.log("wowee"+message);
 		try{
 			message = JSON.parse(message.data);
 		}
@@ -49,7 +48,6 @@ function Simulations(){
 		console.log(message.status);
 		switch(message.status){
 			case "CONFIG_TOKEN":
-				console.log("CONFIG RECIEVED");
 				console.log(message.payload.gameID);
 				Simulations.recievedConfig = message.payload;
 				break;
@@ -57,7 +55,6 @@ function Simulations(){
 				console.log("FIRST Waiting for P2...");
 				break;
 			case "UPDATE_STATE_TOKEN":
-				console.log("P2 Moves Recieved.");
 				Simulations.updateState(message.payload);
 				break;
 			case "GAME_END_TOKEN":
@@ -92,9 +89,6 @@ function Simulations(){
 	self.serverSetup();
 
 	Simulations.checkServerConnected = function(){
-		console.log("hallo");
-		console.log(self.ws);
-		console.log(self.ws.readyState);
 		return (self.ws.readyState == 1 ? true : false);
 	}
 
@@ -124,7 +118,6 @@ function Simulations(){
 	//Sends request to server, then sets awaiting response flag to true, to halt certain other parts of code until the config is returned.
 	Simulations.requestConfig = function(){
 		if(Simulations.recievedConfig == null){
-			console.log("Config Requested");
 			if(Simulations.EmergencyAIMode){
 				Simulations.sendServerMessageOverride(new Message(null,"EMERGENCY_AI")); //aimode
 			}
@@ -179,11 +172,11 @@ function Simulations(){
 	}
 
 	Simulations.gameOver = function(payload){
-		console.log("GAMEOVER");
 		console.log(payload); // [result, myscores, theirscores]
 		var verdict = payload[0]; //"win" "lose" or "draw"
 		if (payload[1] != null){
-			Simulations.Score = payload[1];
+			var noRounds = payload[1].length;
+			Simulations.Score = payload[1][noRounds-1];
 		}
 		//Lose
 		Simulations.GamesPlayed++;
@@ -287,7 +280,6 @@ function Simulations(){
 		Simulations.Score = 0;
 		Simulations.ScoreLists = [];
 		var sim = new Sim(config);
-		console.log(sim);
 		self.dom.appendChild(sim.canvas);
 		self.sims.push(sim);
 	};
@@ -400,9 +392,6 @@ function Simulations(){
 			}
 			else if (differences > 1){
 				Simulations.popupDialogue("You can only move one token per turn!");
-				console.log("too many differences.")
-				console.log("original:"+ Simulations.PreviousMoves);
-				console.log("current:"+self.sims[0].formatPeeps());
 				publish("sim/out_of_connections"); //delet this
 				return false; //TODO REMOVE REPEAT CODE
 			}
