@@ -29,10 +29,10 @@ var server = http.createServer(app);
 server.listen(PORT);
 
 const wss = new WebSocketServer({ server: server });
-
+var client = null;
 if(!Server.LocalMode){
   const { Client } = require('pg');
-  const client = new Client({
+  client = new Client({
     connectionString: process.env.DATABASE_URL,
     ssl: true,
   });
