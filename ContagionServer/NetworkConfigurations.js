@@ -55,12 +55,15 @@ processConfig = async(rawPeeps, rawConnections, uniqueLayoutName, list) =>{
 async function loadConfigs() {
 	var csvPeeps=null;
 	var csvConnections=null;
+	var spliceAmount = -1;
 	if (!Server.LocalMode){
 		csvPeepsDirectory='ContagionServer/Config_Files/';
+		sliceAmount = 29; //removes this prefix when saving unique ID
 	}
 	else{ //depending where it's started from, can be already inside ContagionServer
 	console.log("Running on Local Mode.");
 		csvPeepsDirectory='Config_Files/';
+		sliceAmount = 13;
 	}
 
 	var topologies = [];
@@ -81,7 +84,7 @@ async function loadConfigs() {
 		for (var j=0; j<numLayouts; j++){
 			var positionsPath = topologies[i]+"positions_"+j+".csv";
 			var edgesPath = topologies[i]+"edges.csv";
-			var uniqueLayoutName = topologies[i].slice(13,-1)+"_"+j;
+			var uniqueLayoutName = topologies[i].slice(sliceAmount,-1)+"_"+j;
 
 			var rawPeeps = null;
 			var connections = null;
