@@ -55,16 +55,18 @@ const Message = require('./Message.js');
 
 Server.sendSqlQuery = function(query, game){
   console.log(query);
-  // try{
-  //   client.query(query, function(err, result){
-  //     if (err){
-  //       Server.databaseFailure(err, game, query);
-  //     }
-  //   });
-  // }
-  // catch(err){
-  //   Server.databaseFailure(err, game, query);
-  // }
+  if (!Server.LocalMode){
+    try{
+      client.query(query, function(err, result){
+        if (err){
+          Server.databaseFailure(err, game, query);
+        }
+      });
+    }
+    catch(err){
+      Server.databaseFailure(err, game, query);
+    }
+  }
 }
 
 Server.databaseFailure = function(err, game, query){
