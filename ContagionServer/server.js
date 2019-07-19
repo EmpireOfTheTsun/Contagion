@@ -1,11 +1,12 @@
+Server.LocalMode = true;
+Server.NeutralMode = true;
 
-Server.LocalMode = true; //CHANGE SETTING IN NETWORKCONFIGS // TODO:
 console.log("Server starting!");
 
 //need nodeJS and uuid on the server
 //Use v4 as it is random and therefore hard to predict
 //If we want user accounts, perhaps v3 or v5 would be better, as it produces reliable values based on names.
-//Cookies are a potential route for tracking players, but rather not, since legal issues.
+//Cookies are a potential route for tracking players, but legal issues.
 const uuidv4 = require('uuid/v4');
 const WebSocketServer = require('ws').Server;
 var http = require("http");
@@ -40,6 +41,15 @@ if(!Server.LocalMode){
 }
 
 var clone = require('clone');
+module.exports = {
+  initialiseTopologyLayoutIndexes: function() {
+    Server.initialiseTopologyLayoutIndexes();
+  },
+  NeutralMode: Server.NeutralMode,
+  LocalMode: Server.LocalMode
+};
+module.exports.NeutralMode = Server.NeutralMode;
+module.exports.LocalMode = Server.LocalMode;
 serverConfigs = require('./NetworkConfigurations.js');
 const Message = require('./Message.js');
 
@@ -100,6 +110,17 @@ Server.sendMail = function(emailSubject, errtext){
 
 }
 
+Server.initialiseTopologyLayoutIndexes = function(){
+  var topologyLayoutIndexes = [];
+  console.log("TESTTTTT"+serverConfigs);
+  for (var i=0; i<serverConfigs.length; i++){
+    topologyLayoutIndexes.push(0);
+  }
+
+  Server.CurrentTopologyLayoutIndexes = topologyLayoutIndexes;
+  Server.CurrentTopologyIndex = 0;
+}
+
 //BUG: No connection ended on refresh
 function Server(){
   Server.MAX_TOKENS = 5;
@@ -111,15 +132,16 @@ function Server(){
   Server.AiStrategy = "random";//"SimpleGreedy";
   Server.TokenProtocol = "Incremental"; //"AtStart" or "Incremental"
   Server.AiWaiting = false;
-  Server.NeutralMode = true;
   Server.lastAlertTime = 0;
   Server.demoMode = true;
   Server.heartbeatCheckFrequency = 100;
   Server.heartAttackTime = 500;
 }
+
 Server();
 
-module.exports.NeutralMode = Server.NeutralMode;
+
+
 
 //TODO: Make sure players repeating a game get tracked! I am 99% this is fine, but will need to check
 class GameState {
@@ -887,19 +909,33 @@ Server.submitMoves = function(message, ws){
   }
 }
 
-//TODO: confirm randomize w/ more topologies
-Server.getConfig = function(){
+Server.getConfig = function(retainConfig){
   //picks a topology at random
-  var topologyID = Math.floor(Math.random()*serverConfigs.length);
+  var topologyID = Server.CurrentTopologyIndex;
+  console.log("INITIAL:"+topologyID);
+  if(retainConfig){
+    //For a 2 player game, we want them to use the same topology but different layout.
+    Server.CurrentTopologyIndex = (Server.CurrentTopologyIndex + 1) % serverConfigs.length;
+  }
+  console.log("AFTER(SHOULD BE SAME):"+topologyID);
+  console.log("CHECK"+Server.CurrentTopologyLayoutIndexes);
+  var layoutID = Server.CurrentTopologyLayoutIndexes[topologyID];
+  console.log("INITIAL:"+layoutID);
+  Server.CurrentTopologyLayoutIndexes[topologyID] = (Server.CurrentTopologyLayoutIndexes[topologyID] + 1) % serverConfigs[topologyID].length;
+  console.log("AFTER(SHOULD BE SAME):"+layoutID);
+  console.log(serverConfigs[topologyID]);
+
   var config = {
     type:"sim",
     x: 0,
     y: 0,
     fullscreen: true,
-    network: clone(serverConfigs[topologyID]),
-    instanceID: topologyID,
+    network: clone(serverConfigs[topologyID][layoutID]),
+    instanceID: serverConfigs[topologyID][layoutID].uniqueLayoutID,
     tokenProtocol: Server.TokenProtocol
   }
+  console.log("IMPORTANT!CONFIG: ");
+  console.log(JSON.stringify(config));
   return config;
 }
 
@@ -946,9 +982,12 @@ Server.newGame = function(ws){
   //If nobody's waiting for a player 2
   console.log("WGC "+Server.WaitingGameConfig);
   if (Server.AiMode || Server.WaitingGameConfig == null || Server.CurrentGames.length == 0){
-    var config = Server.getConfig();
     if (!Server.AiMode){
+      var config = Server.getConfig(true);
       Server.WaitingGameConfig = config;
+    }
+    else{
+      var config = Server.getConfig(false); //Don't need to retain the config for the next player if its vs the AI.
     }
     var game = new GameState(config.network.peeps, config.network.connections, config.instanceID, ws);
     Server.CurrentGames.push(game);
@@ -968,7 +1007,7 @@ Server.newGame = function(ws){
   }
   //Matches a player when somebody is waiting
   else{
-    var config = clone(Server.WaitingGameConfig);
+    var config = Server.getConfig(false); //false means we don't use this same config next time //clone(Server.WaitingGameConfig); THIS WAS THE PREVIOUS SETTING!
     Server.WaitingGameConfig = null;
     config.network.peeps.forEach(function(peep){
       //reverses the infected state for P2
