@@ -129,6 +129,8 @@ function Simulations(){
 	}
 
 	Simulations.formatConfig = function(config){
+		console.log("CONFIG");
+		console.log(config);
 		var sim = self.sims[0];
 		var peeps = config.network.peeps;
 		var scaledPeeps = [];
