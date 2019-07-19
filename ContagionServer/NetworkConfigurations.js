@@ -11,7 +11,7 @@ const uuidv4 = require('uuid/v4');
 const fs = require('fs');
 
 
-processConfig = async(rawPeeps, rawConnections) =>{
+processConfig = async(rawPeeps, rawConnections, uniqueLayoutName) =>{
 	//validate input configs
 	if (rawPeeps.length % 2 !== 0){
 		console.log("ERR! Must be even number of peeps!");
@@ -48,14 +48,13 @@ processConfig = async(rawPeeps, rawConnections) =>{
 		connectionData.push(rawConnections[i]);
 	}
 
-	NETWORK_CONFIGS.push({
+	NETWORK_CONFIGS.push({ //TODO: Work this into the database, and test. Also look over the multi-file processing code!
 			"peeps": peepData,
 			"connections": connectionData,
+			"layout" : uniqueLayoutName,
 	});
 }
 
-
-//TODO expand this to do multiple files (ez, just get directory, get all files, do for each file...)
 async function loadConfigs() {
 	var csvPeeps=null;
 	var csvConnections=null;
@@ -75,18 +74,30 @@ async function loadConfigs() {
 	console.log("types="+topologies);
 
 	for (var i=0; i < topologies.length; i++){
-		var positionsPath = topologies[i]+"positions_"+i;
-		var edgesPath = topologies[i]+"edges_"+i;
+		var numLayouts = -1;
+		fs.readdir(dir, (err, files) => {
+  		numLayouts = files.length;
+		});
+		for (j=0; j < numlayouts/2; j++){
 
-		var rawPeeps = null;
-		var connections = null;
-		await csv({noheader:true, output:"csv"}).fromFile(positionsPath).then((jsonObj) =>{
-			rawPeeps = jsonObj;
-		});
-		await csv({noheader:true, output:"csv"}).fromFile(positionsPath).then((jsonObj) =>{
-			connections = jsonObj;
-		});
-		processConfig(rawPeeps, connections);
+			//Creates the file path from the structure we know, plus whatever name we want to give folders for different topologies
+			var positionsPath = topologies[i]+"/positions_"+i;
+			var edgesPath = topologies[i]+"/edges_"+i;
+
+			var rawPeeps = null; //NB: Peep is the original game's name for node. They are interchangable.
+			var connections = null;
+			await csv({noheader:true, output:"csv"}).fromFile(positionsPath).then((jsonObj) =>{
+				rawPeeps = jsonObj; //Loads x and y coordinates for each node from csv
+			});
+			await csv({noheader:true, output:"csv"}).fromFile(edgesPath).then((jsonObj) =>{
+				connections = jsonObj; //Loads pairs of node indexes to denote a connection between them
+			});
+
+			var uniqueLayoutName = topologies[i]+"_"+j;
+			processConfig(rawPeeps, connections, uniqueLayoutName);
+
+		}
+
 	}
 
 
