@@ -1,4 +1,4 @@
-Server.LocalMode = true;
+Server.LocalMode = false;
 Server.NeutralMode = true;
 
 console.log("Server starting!");
@@ -112,7 +112,6 @@ Server.sendMail = function(emailSubject, errtext){
 
 Server.initialiseTopologyLayoutIndexes = function(){
   var topologyLayoutIndexes = [];
-  console.log("TESTTTTT"+serverConfigs);
   for (var i=0; i<serverConfigs.length; i++){
     topologyLayoutIndexes.push(0);
   }
@@ -145,7 +144,7 @@ Server();
 
 //TODO: Make sure players repeating a game get tracked! I am 99% this is fine, but will need to check
 class GameState {
-  constructor(peeps, connections, topologyInstanceID, ws) {
+  constructor(peeps, connections, playerOneLayoutID, playerTwoLayoutID, ws) {
     this.gameID = uuidv4();
     this.playerOne = ws;
     this.playerOne.id = ws.id;
@@ -153,7 +152,8 @@ class GameState {
     this.playerTwo = null;
     this.formattedPeeps = peeps;
     this.formattedConnections = connections;
-    this.topologyInstanceID = topologyInstanceID;
+    this.playerOneLayoutID = playerOneLayoutID;
+    this.playerTwoLayoutID = playerTwoLayoutID;
     this.playerOneMoves = [];
     this.playerTwoMoves = [];
     this.roundNumber = 0;
@@ -186,7 +186,7 @@ class GameState {
     //sets ID to "AI" if they aren't a human player
     var p1id = (this.playerOne != null && this.playerOne != "AI") ? this.playerOne.id : "AI";
     var p2id = (this.playerTwo != null && this.playerTwo != "AI") ? this.playerTwo.id : "AI";
-    var query = `INSERT INTO master_games_table VALUES ('${this.gameID}', '${timestamp}', '${p1id}', '${p2id}', '${this.topologyInstanceID}', '${infectedPeepsString}');`;
+    var query = `INSERT INTO master_games_table VALUES ('${this.gameID}', '${timestamp}', '${p1id}', '${p2id}', '${infectedPeepsString}',  '${this.playerOneLayoutID}', '${this.playerTwoLayoutID}');`;
     Server.sendSqlQuery(query, this);
   }
 
@@ -909,29 +909,35 @@ Server.submitMoves = function(message, ws){
   }
 }
 
-Server.getConfig = function(retainConfig){
+Server.getConfig = function(twoPlayerMode){
   //picks a topology at random
   var topologyID = Server.CurrentTopologyIndex;
-  console.log("INITIAL:"+topologyID);
-  if(retainConfig){
-    //For a 2 player game, we want them to use the same topology but different layout.
-    Server.CurrentTopologyIndex = (Server.CurrentTopologyIndex + 1) % serverConfigs.length;
-  }
-  console.log("AFTER(SHOULD BE SAME):"+topologyID);
+  Server.CurrentTopologyIndex = (Server.CurrentTopologyIndex + 1) % serverConfigs.length;
+
+  //P1 Topology
   console.log("CHECK"+Server.CurrentTopologyLayoutIndexes);
   var layoutID = Server.CurrentTopologyLayoutIndexes[topologyID];
   console.log("INITIAL:"+layoutID);
   Server.CurrentTopologyLayoutIndexes[topologyID] = (Server.CurrentTopologyLayoutIndexes[topologyID] + 1) % serverConfigs[topologyID].length;
   console.log("AFTER(SHOULD BE SAME):"+layoutID);
   console.log(serverConfigs[topologyID]);
+  var p2LayoutID = Server.CurrentTopologyLayoutIndexes[topologyID];
 
+  if(twoPlayerMode){
+    //For a 2 player game, we want them to use the same topology but different layout. If there's no player two, the assignment on the previous line won't have any effect.
+    Server.CurrentTopologyLayoutIndexes[topologyID] = (Server.CurrentTopologyLayoutIndexes[topologyID] + 1) % serverConfigs[topologyID].length;
+  }
+
+  console.log(serverConfigs);
   var config = {
     type:"sim",
     x: 0,
     y: 0,
     fullscreen: true,
     network: clone(serverConfigs[topologyID][layoutID]),
-    instanceID: serverConfigs[topologyID][layoutID].uniqueLayoutID,
+    playerTwoNetwork: clone(serverConfigs[topologyID][p2LayoutID]),
+    playerOneLayoutID: serverConfigs[topologyID][layoutID].uniqueLayoutID,
+    playerTwoLayoutID: serverConfigs[topologyID][p2LayoutID].uniqueLayoutID,
     tokenProtocol: Server.TokenProtocol
   }
   console.log("IMPORTANT!CONFIG: ");
@@ -981,7 +987,7 @@ Server.newGame = function(ws){
   }
   //If nobody's waiting for a player 2
   console.log("WGC "+Server.WaitingGameConfig);
-  if (Server.AiMode || Server.WaitingGameConfig == null || Server.CurrentGames.length == 0){
+  if (Server.AiMode || Server.WaitingGameConfig == null){// || Server.CurrentGames.length == 0){ pretty sure commented out code is wrong! Will break when 2 human games occur
     if (!Server.AiMode){
       var config = Server.getConfig(true);
       Server.WaitingGameConfig = config;
@@ -989,7 +995,7 @@ Server.newGame = function(ws){
     else{
       var config = Server.getConfig(false); //Don't need to retain the config for the next player if its vs the AI.
     }
-    var game = new GameState(config.network.peeps, config.network.connections, config.instanceID, ws);
+    var game = new GameState(config.network.peeps, config.network.connections, config.playerOneLayoutID, config.playerTwoLayoutID, ws);
     Server.CurrentGames.push(game);
     if(Server.AiMode){
       game.addPlayerTwoAI();
@@ -1000,9 +1006,11 @@ Server.newGame = function(ws){
     console.log(config.maxConnections);
     config.gameID = game.gameID;
     console.log(config.gameID);
+    delete config.playerTwoNetwork;
+    delete config.playerTwoLayoutID;
+    delete config.playerOneLayoutID; //Don't want to give player any idea of if they're player 1 or 2
     Server.sendClientMessage(new Message(config, "CONFIG_TOKEN"), ws);
     Server.startTimer(game, 0, 61, true);
-
 
   }
   //Matches a player when somebody is waiting
@@ -1018,6 +1026,10 @@ Server.newGame = function(ws){
     var game = Server.CurrentGames[Server.CurrentGames.length-1];
     game.addPlayerTwo(ws);
     game.playerTwoTimeOffset = Date.now() - game.gameStartTime;
+    config.network = clone(config.playerTwoNetwork);
+    delete config.playerTwoNetwork;
+    delete config.playerTwoLayoutID;
+    delete config.playerOneLayoutID;
     Server.sendClientMessage(new Message(config, "CONFIG_TOKEN"), ws);
     Server.startTimer(game, 0, 61, false);
   }

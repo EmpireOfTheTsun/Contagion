@@ -65,25 +65,22 @@ async function loadConfigs() {
 
 	var topologies = [];
 	//from https://stackoverflow.com/questions/2727167/how-do-you-get-a-list-of-the-names-of-all-files-present-in-a-directory-in-node-j?rq=1
-	console.log(csvPeepsDirectory);
 	fs.readdirSync(csvPeepsDirectory).forEach(file => {
 			topologies.push(csvPeepsDirectory+file+"/");
 	});
-	console.log("types="+topologies);
 
 //FORMAT OF TOPOLOGIES:
 //Each must be in Config_Files with a different folder for each different topology (multiple layouts can be in one folder)
 //In this folder is n*2 folders, where n=number of layouts for this topology. Each topology has one positions_[index] and edges_[index] csv
 	for (var i=0; i < topologies.length; i++){
-		var numLayouts = 0;
-		console.log(topologies);
-		fs.readdirSync(String(topologies)).forEach(file => { //String() is needed as the elements are stored as objects and need conversion for file traversal
-				numLayouts += 0.5;
+		var numLayouts = -1; //there is one edges file, so number of layouts is #files - 1
+		fs.readdirSync(String(topologies[i])).forEach(file => { //String() is needed as the elements are stored as objects and need conversion for file traversal
+				numLayouts ++;
 		});
 		var topologyLayoutsList = [];
 		for (var j=0; j<numLayouts; j++){
 			var positionsPath = topologies[i]+"positions_"+j+".csv";
-			var edgesPath = topologies[i]+"edges_"+j+".csv";
+			var edgesPath = topologies[i]+"edges.csv";
 			var uniqueLayoutName = topologies[i].slice(13,-1)+"_"+j;
 
 			var rawPeeps = null;
@@ -92,12 +89,10 @@ async function loadConfigs() {
 			await csv({noheader:true, output:"csv"}).fromFile(positionsPath).then((jsonObj) =>{
 				rawPeeps = jsonObj;
 			});
-			console.log("WOW3");
 
 			await csv({noheader:true, output:"csv"}).fromFile(edgesPath).then((jsonObj) =>{
 				connections = jsonObj;
 			});
-			console.log("WOW4");
 
 			processConfig(rawPeeps, connections, uniqueLayoutName, topologyLayoutsList); //slice removes the Config_Files part to give the name of the folder
 		}
@@ -107,6 +102,7 @@ async function loadConfigs() {
 
 	shuffle(NETWORK_CONFIGS); //random order of topologies
 	Server.initialiseTopologyLayoutIndexes();// initialises Server.CurrentTopologyLayoutIndexes and Server.CurrentTopologyIndices
+	console.log(NETWORK_CONFIGS);
 	console.log("ready");
 
 }
