@@ -129,7 +129,7 @@ function Server(){
   Server.WaitingGameConfig = null;
   Server.RoundLimit = 10;
   Server.AiMode = true;
-  Server.InfectionMode = "majority";
+  Server.InfectionMode = "wowee"; //"majority" or anything else
   Server.AiStrategy = "random";//"SimpleGreedy";
   Server.TokenProtocol = "Incremental"; //"AtStart" or "Incremental"
   Server.AiWaiting = false;
@@ -188,6 +188,9 @@ class GameState {
     //sets ID to "AI" if they aren't a human player
     var p1id = (this.playerOne != null && this.playerOne != "AI") ? this.playerOne.id : "AI";
     var p2id = (this.playerTwo != null && this.playerTwo != "AI") ? this.playerTwo.id : "AI";
+    if (p2id == "AI"){
+      this.playerTwoLayoutID = "";
+    }
     var query = `INSERT INTO master_games_table VALUES ('${this.gameID}', '${timestamp}', '${p1id}', '${p2id}', '${infectedPeepsString}',  '${this.playerOneLayoutID}', '${this.playerTwoLayoutID}');`;
     Server.sendSqlQuery(query, this);
   }
