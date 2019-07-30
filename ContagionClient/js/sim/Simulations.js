@@ -6,8 +6,8 @@ I have made an attempt to refactor things into the overall Simulations class, bu
 
 //SIM DELARED AT 167
 function Simulations(){
-	Simulations.LocalMode = false;
-
+	Simulations.LocalMode = true;
+	Simulations.Username = "";
 
 
 	var self = this;
@@ -34,6 +34,16 @@ function Simulations(){
 	else{
 		Simulations.ServerLocation = "wss://stark-atoll-77422.herokuapp.com/";
 	}
+
+function getUsername() {
+	var user = "";
+	while (user == ""){
+    user = prompt("Please enter your name:", "");
+  }
+	Simulations.Username = user;
+}
+
+getUsername();
 
 
 	parseEvent = function(message){
@@ -122,7 +132,7 @@ function Simulations(){
 				Simulations.sendServerMessageOverride(new Message(null,"EMERGENCY_AI")); //aimode
 			}
 			else{
-				Simulations.sendServerMessage(new Message(null,"NEW_GAME_TOKEN"));
+				Simulations.sendServerMessage(new Message(Simulations.Username,"NEW_GAME_TOKEN"));
 			}
 			Simulations.awaitingResponse = true;
 		}

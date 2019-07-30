@@ -1,4 +1,6 @@
 NETWORK_CONFIGS = [];
+NETWORK_LAPLACIANS = [];
+
 NETWORK_CONFIGS.Xscale = 1//1200; //Input topologies have x/y coordinates between 0 and 1. This scales it to a typical player's screen.
 NETWORK_CONFIGS.Yscale = 1//700;
 NETWORK_CONFIGS.Xoffset = 0//75;//-100;
@@ -9,7 +11,7 @@ const uuidv4 = require('uuid/v4');
 const fs = require('fs');
 
 
-processConfig = async(rawPeeps, rawConnections, uniqueLayoutName, list) =>{
+processConfig = async(rawPeeps, rawConnections, uniqueLayoutName, list, topologyIndex) =>{
 	//validate input configs
 	if (rawPeeps.length % 2 !== 0){
 		console.log("ERR! Must be even number of peeps!");
@@ -47,8 +49,9 @@ processConfig = async(rawPeeps, rawConnections, uniqueLayoutName, list) =>{
 
 	list.push({
 			"peeps": peepData,
-			"connections": connectionData,
+			"connections": connectionData, //TODO: Slight performance ehancement performed on laplacian but could be applied here. Connections are same for layouts of same topology, so could use topologyIndex to fetch conenctions from a list, preventing duplicate data
 			"uniqueLayoutID": uniqueLayoutName,
+			"laplacianID": topologyIndex,
 	});
 }
 
@@ -81,23 +84,28 @@ async function loadConfigs() {
 				numLayouts ++;
 		});
 		var topologyLayoutsList = [];
+
+		var edgesPath = topologies[i]+"edges.csv";
+		var connections = null;
+		await csv({noheader:true, output:"csv"}).fromFile(edgesPath).then((jsonObj) =>{
+			connections = jsonObj;
+		});
+
+		var topologyLaplacian = createLaplacian(connections);
+		NETWORK_LAPLACIANS.push(topologyLaplacian);
+
 		for (var j=0; j<numLayouts; j++){
 			var positionsPath = topologies[i]+"positions_"+j+".csv";
-			var edgesPath = topologies[i]+"edges.csv";
 			var uniqueLayoutName = topologies[i].slice(sliceAmount,-1)+"_"+j;
 
 			var rawPeeps = null;
-			var connections = null;
 			console.log(positionsPath);
 			await csv({noheader:true, output:"csv"}).fromFile(positionsPath).then((jsonObj) =>{
 				rawPeeps = jsonObj;
 			});
 
-			await csv({noheader:true, output:"csv"}).fromFile(edgesPath).then((jsonObj) =>{
-				connections = jsonObj;
-			});
 
-			processConfig(rawPeeps, connections, uniqueLayoutName, topologyLayoutsList); //slice removes the Config_Files part to give the name of the folder
+			processConfig(rawPeeps, connections, uniqueLayoutName, topologyLayoutsList, i); //slice removes the Config_Files part to give the name of the folder
 		}
 		shuffle(topologyLayoutsList); //random order of layouts
 		NETWORK_CONFIGS.push(topologyLayoutsList); //Changes the original usage! Now contains LISTS of configs
@@ -107,7 +115,37 @@ async function loadConfigs() {
 	Server.initialiseTopologyLayoutIndexes();// initialises Server.CurrentTopologyLayoutIndexes and Server.CurrentTopologyIndices
 	console.log(NETWORK_CONFIGS);
 	console.log("ready");
+}
 
+function createLaplacian(connections){
+	//var laplacian = new Array2D(Server.NumberOfNodes, Server.NumberOfNodes, 0);
+
+	var laplacian = [];
+	for (var y=0; y<Server.NumberOfNodes; y++){
+		var arr = [];
+		for (var x=0; x<Server.NumberOfNodes; x++){
+			arr.push(0);
+		}
+		laplacian.push(arr);
+	}
+
+	console.log(connections);
+	for (var i=0; i < connections.length; i++){
+
+		var node1 = connections[i][0];
+		var node2 = connections[i][1];
+
+		laplacian[node1][node1]++;
+		laplacian[node2][node2]++; //adds to the degree matrix
+
+		laplacian[node1][node2]--;
+		laplacian[node2][node1]--; //subtracts the adjacency matrix
+
+	}
+	console.log("COMPLETELAPTEST");
+	console.log(laplacian);
+
+	return laplacian;
 }
 
 //Fisher-Yates shuffle. Credit: https://stackoverflow.com/questions/6274339/how-can-i-shuffle-an-array
@@ -118,8 +156,38 @@ function shuffle(a) {
     }
     return a;
 }
+//
+// //2D array class, from https://stackoverflow.com/a/26562086
+// //This is a nice implementation that's easy to code with. Modified with increment and decrement
+// function Array2D(xSize, ySize, initialValue) {
+//   initialValue=initialValue || 0;
+//   // create an flat empty array filled with the initial value
+//   var length = xSize*ySize;
+//   var innerArray = new Array(length);
+//   for (var i=0; i<length; i++) innerArray[i] = initialValue;
+//   // accessors
+//   this.getAt = function(x, y) { return innerArray[x+xSize*y]};
+//   this.setAt = function(x, y, val) { innerArray[x+xSize*y]=val};
+// 	this.increment = function(x,y) {innerArray[x+xSize*y]++};
+// 	this.decrement = function(x,y) {innerArray[x+xSize*y]--};
+// 	this.addValue = function(x,y,val) {this.setAt(x,y,(this.getAt(x,y)+val))};
+// 	this.print = function() {
+// 		var formattedArray = [];
+// 		for (var i=0; i<ySize; i++){
+// 			var arr = [];
+// 			for (var j=0; j<xSize; j++){
+// 				arr.push(this.getAt(i,j));
+// 			}
+// 			formattedArray.push(arr);
+// 		}
+// 		console.log(formattedArray);
+// 		console.log(innerArray);
+// 		console.log(innerArray.length);
+// 	};
+// }
 
 loadConfigs();
 
 
-module.exports = NETWORK_CONFIGS;
+module.exports.configs = NETWORK_CONFIGS;
+module.exports.laplacians = NETWORK_LAPLACIANS;

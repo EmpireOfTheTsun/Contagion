@@ -1,5 +1,16 @@
-Server.LocalMode = false;
+Server.LocalMode = true;
 Server.NeutralMode = true;
+Server.TrialMode = true;
+Server.NumberOfNodes = 20; //Changing this may require some refactoring...
+Server.TestMoves = [[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
+[ 6, 5, 12, 5, 2, 17, 7, 18, 9, 9 ],
+[ 7, 12, 9, 13, 13, 1, 4, 19, 10, 19 ]];
+
+//random moves:
+
+/*
+
+*/
 
 console.log("Server starting!");
 
@@ -46,11 +57,17 @@ module.exports = {
     Server.initialiseTopologyLayoutIndexes();
   },
   NeutralMode: Server.NeutralMode,
-  LocalMode: Server.LocalMode
+  LocalMode: Server.LocalMode,
+  NumberOfNodes: Server.NumberOfNodes
+
 };
 module.exports.NeutralMode = Server.NeutralMode;
 module.exports.LocalMode = Server.LocalMode;
-serverConfigs = require('./NetworkConfigurations.js');
+//module.exports.NumberOfNodes = Server.NumberOfNodes;
+
+configData = require('./NetworkConfigurations.js');
+serverConfigs = configData.configs;
+laplaciansList = configData.laplacians; //TODO: INTEGRATE THIS
 const Message = require('./Message.js');
 
 Server.sendSqlQuery = function(query, game){
@@ -146,7 +163,7 @@ Server();
 
 //TODO: Make sure players repeating a game get tracked! I am 99% this is fine, but will need to check
 class GameState {
-  constructor(peeps, connections, playerOneLayoutID, playerTwoLayoutID, ws) {
+  constructor(peeps, connections, playerOneLayoutID, playerTwoLayoutID, laplacianID, ws) {
     this.gameID = uuidv4();
     this.playerOne = ws;
     this.playerOne.id = ws.id;
@@ -171,6 +188,10 @@ class GameState {
     this.aiCheckTimer = null;
     this.playerOneScoreList = [];
     this.playerTwoScoreList = [];
+    this.laplacianID = laplacianID;
+    if (Server.TrialMode){
+      this.predeterminedAIMoves = Server.TestMoves[laplacianID];
+    }
     //
   }
 
@@ -204,7 +225,6 @@ class GameState {
   }
 
   GameState.prototype.addMovesToDatabase = function(){
-    console.log(this.flippedNodes);
     var flippedString = "";
     this.flippedNodes.forEach(function(nodeIndex){
       flippedString = flippedString + nodeIndex + "_";
@@ -232,7 +252,6 @@ class GameState {
 
     //Performs AI moves before recording player moves (to prevent bias)
     this.aiCheck();
-
     isPlayerOne ? (this.playerOneMoves = moves) : (this.playerTwoMoves = moves);
     if (opponentReady){
       if (Server.AiWaiting == true && (this.playerTwo == "AI" || this.playerOne == "AI")){
@@ -266,7 +285,6 @@ class GameState {
   GameState.prototype.addPlayerOneMoves = function(moves){
     clearTimeout(this.playerOneTimer);
     this.playerOneTime = Date.now() - this.gameStartTime;
-    console.log("P1TIME:"+this.playerOneTime);
     this.addPlayerMoves(moves, true, (this.playerTwo == "AI" || this.playerTwoMoves.length > 0));
     if (this.roundNumber == 0){
       //No P2 present
@@ -301,15 +319,13 @@ class GameState {
   GameState.prototype.aiCheck = function(){
     var oneAI = this.playerOne == "AI";
     var twoAI = this.playerTwo == "AI";
-    console.log("AICHECK"+this.playerOne);
-    console.log(this.playerTwo);
     if (oneAI || twoAI){
       if (oneAI && twoAI){
         //both AI. kill game.
         this.killGame(false, this);
       }
       else{
-        var aiPlayer = oneAI ? this.playerOneMoves : this.playerTwoMoves;
+        var aiPlayer = this.playerTwoMoves; //WARN: Assumes P2 always AI.
         this.aiTurn(aiPlayer);
       }
     }
@@ -567,9 +583,16 @@ class GameState {
 
   GameState.prototype.aiTurn = function(aiMoves){
     var oneNodeOnly = (this.prevAiMoves.length == 0) ? false : true;
+    if (Server.TrialMode){
+      this.aiTurnPredetermined(aiMoves, oneNodeOnly);
+      return;
+    }
     switch(Server.AiStrategy){
       case "SimpleGreedy":
         this.aiTurnSimpleGreedy(aiMoves, oneNodeOnly);
+        break;
+      case "Equilibrium":
+        this.aiTurnEquilibrium(aiMoves, oneNodeOnly);
         break;
       default:
         this.aiTurnRandom(aiMoves, oneNodeOnly);
@@ -839,6 +862,84 @@ class GameState {
     return false;
   }
 
+  //Strategy to maximise score at some time-insensitive equilibrium
+  GameState.prototype.aiTurnEquilibrium = function(aiMoves, oneNodeOnly){
+    //adds one token when the token protocol is incremental
+    console.log("PARAMETERCHECK");
+    console.log(aiMoves);
+    console.log(oneNodeOnly);
+    if(Server.TokenProtocol == "Incremental"){
+      var aiVector; //We want to find the best value for this, as we are playing as the AI here.
+      var playerVector;
+
+      if(this.playerTwo == "AI"){
+        aiVector = this.playerTwoMoves;
+        playerVector = this.playerOneMoves;
+      }
+      else{
+        aiVector = this.playerOneMoves;
+        playerVector = this.playerTwoMoves;
+      }
+
+      var laplacian = clone(laplacianList[this.laplacianID]);
+
+      for (var i=0; i < aiVector.length; i++){
+        laplacian.increment(aiVector[i],aiVector[i]);
+        laplacian.increment(playerVector[i],playerVector[i]);
+      } //TODO INVERSE MATRIXC
+      console.log("FINAL LAPLACIAN TEST");
+      console.log(laplacian);
+
+      var maxScore = 0;
+      for (var i=0; i < Server.NumberOfNodes; i++){
+
+      }
+
+      var probabilitiesVector = this.createProbabilitiesVector(laplacian, aiVector, playerVector);
+      var selectionFitness = this.calculateFitness(probabilitiesVector);
+
+
+      var peepIndex = maxScore;
+      this.prevAiMoves.push(peepIndex);
+      this.prevAiMoves.forEach(function(move){
+        aiMoves.push(move);
+      });
+      return;
+    }
+    else{
+      console.log("ERROR! This algorithm hasn't been developed for non-incremental token protocol yet!");
+    }
+  }
+
+  GameState.prototype.createProbabilitiesVector = function(laplacian, aiVector, playerVector){
+    for (var i=0; i < Server.NumberOfNodes; i++){
+      for (var j=0; j < Server.NumberOfNodes; j++){
+        if (i=j){
+
+        }
+        else{
+
+        }
+      }
+    }
+  }
+
+  GameState.prototype.calculateFitness = function(probabilitiesVector){
+
+  }
+
+  GameState.prototype.aiTurnPredetermined = function(aiMoves, oneNodeOnly){
+    var peepIndex = this.predeterminedAIMoves[this.roundNumber];
+    console.log(this.predeterminedAIMoves);
+    console.log(peepIndex);
+    console.log("---------CHECKME-------------");
+    this.prevAiMoves.push(peepIndex);
+    this.prevAiMoves.forEach(function(move){
+      aiMoves.push(move);
+    });
+    return;
+  }
+
   GameState.prototype.addPlayerTwo = function(ws){
     this.PLAYER_TWO_AI = false;
     this.playerTwo = ws;
@@ -943,10 +1044,9 @@ Server.getConfig = function(twoPlayerMode){
     playerTwoNetwork: clone(serverConfigs[topologyID][p2LayoutID]),
     playerOneLayoutID: serverConfigs[topologyID][layoutID].uniqueLayoutID,
     playerTwoLayoutID: serverConfigs[topologyID][p2LayoutID].uniqueLayoutID,
+    laplacianID:serverConfigs[topologyID][layoutID].laplacianID,
     tokenProtocol: Server.TokenProtocol
   }
-  console.log("IMPORTANT!CONFIG: ");
-  console.log(JSON.stringify(config));
   return config;
 }
 
@@ -973,7 +1073,10 @@ Server.sendClientMessage = function(message, ws){
   }
 }
 
-Server.newGame = function(ws){
+Server.newGame = function(username, ws){
+  if (username != null && username.length > 0){
+    ws.id = username;
+  }
   let gameTest = Server.CurrentGames.filter(gameState => {
     return (gameState.playerOne == ws || gameState.playerTwo == ws);
   });
@@ -1000,7 +1103,8 @@ Server.newGame = function(ws){
     else{
       var config = Server.getConfig(false); //Don't need to retain the config for the next player if its vs the AI.
     }
-    var game = new GameState(config.network.peeps, config.network.connections, config.playerOneLayoutID, config.playerTwoLayoutID, ws);
+    var game = new GameState(config.network.peeps, config.network.connections, config.playerOneLayoutID, config.playerTwoLayoutID, config.laplacianID, ws);
+    console.log("Laplaciantest:"+config.laplacianID);
     Server.CurrentGames.push(game);
     if(Server.AiMode){
       game.addPlayerTwoAI();
@@ -1126,11 +1230,11 @@ Server.ParseMessage = function(message, ws){
       break;
     case "NEW_GAME_TOKEN":
       //Server.AiMode = false;
-      Server.newGame(ws);
+      Server.newGame(message.payload, ws);
       break;
     case "EMERGENCY_AI":
       Server.AiMode = true;
-      Server.newGame(ws);
+      Server.newGame(message.payload, ws);
     case "CLICK_TOKEN":
       Server.registerClick(message.payload, ws);
       break;
