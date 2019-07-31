@@ -8,7 +8,7 @@ I have made an attempt to refactor things into the overall Simulations class, bu
 function Simulations(){
 	Simulations.LocalMode = false;
 	Simulations.Username = "";
-	const uuidv4 = require('uuid/v4');
+	//const uuidv4 = require('uuid/v4');
 
 
 	var self = this;
@@ -37,9 +37,9 @@ function Simulations(){
 	}
 
 function cookieManager() {
-	if !(document.cookie.length > 0){
+	if (!document.cookie.length > 0){
 		console.log("no cookie found. Setting now.");
-		document.cookie = uuidv4();
+		document.cookie = "testio"
 	}
 	Simulations.Username = document.cookie;
 	console.log(document.cookie);

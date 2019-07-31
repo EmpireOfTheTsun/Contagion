@@ -1108,7 +1108,7 @@ Server.processUsername = function(username, ws){
 
 Server.newGame = function(username, ws){
   if (username != null && username.length > 0){
-    processUsername(username, ws);
+    Server.processUsername(username, ws);
     ws.id = username; //just in case of collisions. Substring as database can only hold strings of certain length
     if (ws.id.length > 36){
       ws.id = ws.id.subsctring(0,36); //prevent too long usernames from making the db fail to record games. Should be fine if we stick to uuid
