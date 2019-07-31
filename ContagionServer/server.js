@@ -1104,7 +1104,6 @@ Server.processUsername(username, ws){
   // }
   // if(!usernameExists(username)){
 
-  }
 }
 
 Server.newGame = function(username, ws){
