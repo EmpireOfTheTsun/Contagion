@@ -1082,7 +1082,7 @@ Server.sendClientMessage = function(message, ws){
   }
 }
 
-Server.processUsername(username, ws){
+Server.processUsername = function(username, ws){
   console.log(Server.playerTopologies)
   var found = Server.playerTopologies.find(function(item){
     if (item[0] == "username"){
