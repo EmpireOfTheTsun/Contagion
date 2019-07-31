@@ -1,18 +1,27 @@
-Server.LocalMode = true;
+Server.LocalMode = false;
 Server.NeutralMode = true;
 Server.TrialMode = true;
 Server.NumberOfNodes = 20; //Changing this may require some refactoring...
 Server.TestMoves = [[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
 [ 6, 5, 12, 5, 2, 17, 7, 18, 9, 9 ],
 [ 7, 12, 9, 13, 13, 1, 4, 19, 10, 19 ]];
+Server.playerTopologies = [];
 
-//random moves:
-
-/*
-
-*/
 
 console.log("Server starting!");
+
+Server.shuffle = function(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+Server.generatePerm = function(){
+  var list = [0,1,2,3,4,5,6,7,8];
+  return Server.shuffle(list);
+}
 
 //need nodeJS and uuid on the server
 //Use v4 as it is random and therefore hard to predict
@@ -1073,9 +1082,38 @@ Server.sendClientMessage = function(message, ws){
   }
 }
 
+Server.processUsername(username, ws){
+  console.log(Server.playerTopologies)
+  var found = Server.playerTopologies.find(function(item){
+    if (item[0] == "username"){
+      return item[1];
+    }
+  });
+  console.log("HELLOCHECKME");
+  console.log(found);
+  if (found == undefined){
+    var perm = Server.generatePerm();
+    ws.permutation = perm;
+    Server.playerTopologies.push([username, perm]);
+  }
+  else{
+    ws.permutation = found;
+  }
+  // for (int i=0; i<Server.playerTopologies.length){
+  //   if(Server.playerTopologies)
+  // }
+  // if(!usernameExists(username)){
+
+  }
+}
+
 Server.newGame = function(username, ws){
   if (username != null && username.length > 0){
-    ws.id = username;
+    processUsername(username, ws);
+    ws.id = username; //just in case of collisions. Substring as database can only hold strings of certain length
+    if (ws.id.length > 36){
+      ws.id = ws.id.subsctring(0,36); //prevent too long usernames from making the db fail to record games. Should be fine if we stick to uuid
+    }
   }
   let gameTest = Server.CurrentGames.filter(gameState => {
     return (gameState.playerOne == ws || gameState.playerTwo == ws);
@@ -1243,3 +1281,28 @@ Server.ParseMessage = function(message, ws){
       break;
   }
 }
+
+//Discontinued but may be useful later
+// Server.generatePerm = function(){ //This was made with 3 sets of 3 in mind but can be converted to more general without much issue
+//   var perm = [];
+//   var set1 = [0,1,2];
+//   var set2 = [3,4,5];
+//   var set3 = [6,7,8];
+//   var setSet = [set1, set2, set3];
+//   var direction = (Math.random() > 0.5? 0 : 1);
+//   var nextset = Math.floor(3 * Math.random());
+//   for (var i=0; i < 9; i++){
+//     var index = Math.floor(setSet[nextSet].length * Math.random());
+//     perm.push(setSet[nextSet].splice(index,1));
+//     if (direction == 0){
+//       nextSet++;
+//       nextSet = nextSet % 3;
+//     }
+//     else{
+//       nextSet--;
+//       if (nextSet < 0){
+//         nextSet += 3;
+//       }
+//     }
+//   }
+// }

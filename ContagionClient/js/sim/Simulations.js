@@ -6,8 +6,9 @@ I have made an attempt to refactor things into the overall Simulations class, bu
 
 //SIM DELARED AT 167
 function Simulations(){
-	Simulations.LocalMode = true;
+	Simulations.LocalMode = false;
 	Simulations.Username = "";
+	const uuidv4 = require('uuid/v4');
 
 
 	var self = this;
@@ -35,15 +36,16 @@ function Simulations(){
 		Simulations.ServerLocation = "wss://stark-atoll-77422.herokuapp.com/";
 	}
 
-function getUsername() {
-	var user = "";
-	while (user == ""){
-    user = prompt("Please enter your name:", "");
-  }
-	Simulations.Username = user;
+function cookieManager() {
+	if !(document.cookie.length > 0){
+		console.log("no cookie found. Setting now.");
+		document.cookie = uuidv4();
+	}
+	Simulations.Username = document.cookie;
+	console.log(document.cookie);
 }
 
-getUsername();
+cookieManager();
 
 
 	parseEvent = function(message){
@@ -129,7 +131,7 @@ getUsername();
 	Simulations.requestConfig = function(){
 		if(Simulations.recievedConfig == null){
 			if(Simulations.EmergencyAIMode){
-				Simulations.sendServerMessageOverride(new Message(null,"EMERGENCY_AI")); //aimode
+				Simulations.sendServerMessageOverride(new Message(Simulations.Username,"EMERGENCY_AI")); //aimode
 			}
 			else{
 				Simulations.sendServerMessage(new Message(Simulations.Username,"NEW_GAME_TOKEN"));
