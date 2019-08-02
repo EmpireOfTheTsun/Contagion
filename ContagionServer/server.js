@@ -1093,8 +1093,8 @@ Server.sendClientMessage = function(message, ws){
 Server.processUsername = function(username, ws){
   console.log(Server.playerTopologies);
   var found = Server.playerTopologies.find(function(item){
-    console.log("USER FOUND");
     if (item[0] == "username"){
+      console.log("USER FOUND");
       return item[1];
     }
   });
