@@ -1107,6 +1107,8 @@ Server.processUsername = function(username, ws){
   }
   console.log(Server.playerTopologies);
   var found = Server.playerTopologies.find(function(item){
+    console.log("ITEM");
+    console.log(item);
     if (item[0] == "username"){
       console.log("USER FOUND");
       return item[1];
