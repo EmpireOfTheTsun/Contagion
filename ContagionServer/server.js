@@ -1042,6 +1042,7 @@ Server.getConfig = function(twoPlayerMode, mixedTopologyID){
   else{
     var topologyID = Math.floor(mixedTopologyID / serverConfigs.length);
     var layoutID = mixedTopologyID % serverConfigs.length;
+    var p2LayoutID = layoutID; //TODO: make this work outside the trial
     console.log("Mix:"+mixedTopologyID);
     console.log("Top:"+topologyID);
     console.log("Lay:"+layoutID);
