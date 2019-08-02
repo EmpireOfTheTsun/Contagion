@@ -1098,12 +1098,15 @@ Server.sendClientMessage = function(message, ws){
 Server.processUsername = function(username, ws){
   var complete = false;
   if (username == undefined){
+    console.log("fuc1");
     username = uuidv4();
   }
   if (username == null){
+    console.log("fuc2");
     username = uuidv4();
   }
   if (!username.length > 0){
+    console.log("fuc3");
     username = uuidv4();
   }
   console.log(Server.playerTopologies);
@@ -1304,7 +1307,10 @@ Server.ParseMessage = function(message, ws){
       //Server.AiMode = false;
       console.log("MSGCHECK");
       console.log(message);
-      Server.newGame(message.payload, ws);
+      if(message.payload.length > 0){
+        Server.newGame(message.payload, ws);
+      }
+      else{ console.log("Somebody's fucked it!");}
       break;
     case "EMERGENCY_AI":
       Server.AiMode = true;

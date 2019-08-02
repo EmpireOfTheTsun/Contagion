@@ -99,7 +99,7 @@ async function loadConfigs() {
 			var uniqueLayoutName = topologies[i].slice(sliceAmount,-1)+"_"+j;
 
 			var rawPeeps = null;
-			console.log(positionsPath);
+			//console.log(positionsPath);
 			await csv({noheader:true, output:"csv"}).fromFile(positionsPath).then((jsonObj) =>{
 				rawPeeps = jsonObj;
 			});
@@ -113,7 +113,7 @@ async function loadConfigs() {
 
 	shuffle(NETWORK_CONFIGS); //random order of topologies
 	Server.initialiseTopologyLayoutIndexes();// initialises Server.CurrentTopologyLayoutIndexes and Server.CurrentTopologyIndices
-	console.log(NETWORK_CONFIGS);
+	//console.log(NETWORK_CONFIGS);
 	console.log("ready");
 }
 
@@ -129,7 +129,7 @@ function createLaplacian(connections){
 		laplacian.push(arr);
 	}
 
-	console.log(connections);
+	//console.log(connections);
 	for (var i=0; i < connections.length; i++){
 
 		var node1 = connections[i][0];
@@ -142,8 +142,8 @@ function createLaplacian(connections){
 		laplacian[node2][node1]--; //subtracts the adjacency matrix
 
 	}
-	console.log("COMPLETELAPTEST");
-	console.log(laplacian);
+	//console.log("COMPLETELAPTEST");
+	//console.log(laplacian);
 
 	return laplacian;
 }
