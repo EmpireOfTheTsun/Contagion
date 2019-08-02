@@ -1109,7 +1109,7 @@ Server.processUsername = function(username, ws){
   console.log(Server.playerTopologies);
   var found = Server.playerTopologies.find(function(item){
     console.log("ITEM");
-    console.log(item);
+    console.log(item); //lol
     if (item[0] == username){
       console.log("USER FOUND");
       ws.permutation = item[1];
