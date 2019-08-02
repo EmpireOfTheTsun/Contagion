@@ -1123,7 +1123,7 @@ Server.processUsername = function(username, ws){
 
   console.log("Player "+username+" Topology Order:");
   console.log(ws.permutation);
-  cosole.log(Server.playerTopologies);
+  console.log(Server.playerTopologies);
   // for (int i=0; i<Server.playerTopologies.length){
   //   if(Server.playerTopologies)
   // }
