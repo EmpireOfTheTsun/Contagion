@@ -1112,18 +1112,18 @@ Server.processUsername = function(username, ws){
     if (item[0] == username){
       console.log("USER FOUND");
       ws.permutation = item[1];
+      console.log("Player "+username+" Topology Order:");
+      console.log(ws.permutation);
+      return;
     }
   });
-  console.log("HELLOCHECKME");
-  console.log(found);
-  if (found == undefined){
-    var perm = Server.generatePerm();
-    ws.permutation = perm;
-    Server.playerTopologies.push([username, perm]);
-  }
+  var perm = Server.generatePerm();
+  ws.permutation = perm;
+  Server.playerTopologies.push([username, perm]);
 
   console.log("Player "+username+" Topology Order:");
   console.log(ws.permutation);
+  cosole.log(Server.playerTopologies);
   // for (int i=0; i<Server.playerTopologies.length){
   //   if(Server.playerTopologies)
   // }
