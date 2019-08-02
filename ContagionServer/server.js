@@ -166,7 +166,7 @@ function Server(){
   Server.lastAlertTime = 0;
   Server.demoMode = true;
   Server.heartbeatCheckFrequency = 100;
-  Server.heartAttackTime = 1400;
+  Server.heartAttackTime = 3000;
 }
 
 Server();
