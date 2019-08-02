@@ -10,7 +10,7 @@ function Simulations(){
 	Simulations.Username = "";
 
 	function cookieManager() {
-		if (!document.cookie.length > 0){
+		if (!document.cookie.length > 0 || document.cookie == null || document.cookie == undefined){
 			console.log("no cookie found. Setting now.");
 			var user = "";
 			while (user == ""){
