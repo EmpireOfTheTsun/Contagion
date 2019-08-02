@@ -24,7 +24,7 @@ Server.generatePerm = function(){
   for (var i=0; i < 4; i++){
     list.push(list[i]);
   }
-  return shuffle(list);
+  return list;
 }
 
 //need nodeJS and uuid on the server
@@ -1042,14 +1042,14 @@ Server.getConfig = function(twoPlayerMode, mixedTopologyID){
   else{
     var topologyID = Math.floor(mixedTopologyID / serverConfigs.length);
     var layoutID = mixedTopologyID % serverConfigs.length;
+    console.log("Top:"+topologyID);
+    console.log("Lay:"+layoutID);
   }
 
   if(twoPlayerMode){
     //For a 2 player game, we want them to use the same topology but different layout. If there's no player two, the assignment on the previous line won't have any effect.
     Server.CurrentTopologyLayoutIndexes[topologyID] = (Server.CurrentTopologyLayoutIndexes[topologyID] + 1) % serverConfigs[topologyID].length;
   }
-
-  console.log(serverConfigs);
   var config = {
     type:"sim",
     x: 0,
