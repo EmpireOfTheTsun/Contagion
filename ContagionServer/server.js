@@ -1096,6 +1096,7 @@ Server.sendClientMessage = function(message, ws){
 }
 
 Server.processUsername = function(username, ws){
+  var complete = false;
   if (username == undefined){
     username = uuidv4();
   }
@@ -1112,15 +1113,14 @@ Server.processUsername = function(username, ws){
     if (item[0] == username){
       console.log("USER FOUND");
       ws.permutation = item[1];
-      console.log("Player "+username+" Topology Order:");
-      console.log(ws.permutation);
-      return;
+      complete = true;
     }
   });
-  var perm = Server.generatePerm();
-  ws.permutation = perm;
-  Server.playerTopologies.push([username, perm]);
-
+  if (complete == false){
+    var perm = Server.generatePerm();
+    ws.permutation = perm;
+    Server.playerTopologies.push([username, perm]);
+  }
   console.log("Player "+username+" Topology Order:");
   console.log(ws.permutation);
   console.log(Server.playerTopologies);
