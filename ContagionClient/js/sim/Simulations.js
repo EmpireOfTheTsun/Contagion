@@ -8,6 +8,27 @@ I have made an attempt to refactor things into the overall Simulations class, bu
 function Simulations(){
 	Simulations.LocalMode = false;
 	Simulations.Username = "";
+
+	function cookieManager() {
+		if (!document.cookie.length > 0){
+			console.log("no cookie found. Setting now.");
+			var user = "";
+			while (user == ""){
+		    user = prompt("Please enter the Player ID on your questionnaire:", "");
+		  }
+
+			document.cookie = user;
+			Simulations.Username = user;
+
+		}
+		else{
+			Simulations.Username = document.cookie;
+		}
+		console.log(Simulations.Username);
+	}
+
+	cookieManager();
+
 	//const uuidv4 = require('uuid/v4');
 
 
@@ -36,16 +57,8 @@ function Simulations(){
 		Simulations.ServerLocation = "wss://stark-atoll-77422.herokuapp.com/";
 	}
 
-function cookieManager() {
-	if (!document.cookie.length > 0){
-		console.log("no cookie found. Setting now.");
-		document.cookie = "testio"
-	}
-	Simulations.Username = document.cookie;
-	console.log(document.cookie);
-}
 
-cookieManager();
+
 
 
 	parseEvent = function(message){
