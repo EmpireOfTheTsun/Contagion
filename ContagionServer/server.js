@@ -1029,7 +1029,7 @@ Server.submitMoves = function(message, ws){
 }
 
 Server.getConfig = function(twoPlayerMode, mixedTopologyID){
-  if (mixedTopologyID == null){
+  if (mixedTopologyID == undefined){
     //picks a topology at random
       var topologyID = Server.CurrentTopologyIndex;
       Server.CurrentTopologyIndex = (Server.CurrentTopologyIndex + 1) % serverConfigs.length;
@@ -1042,6 +1042,7 @@ Server.getConfig = function(twoPlayerMode, mixedTopologyID){
   else{
     var topologyID = Math.floor(mixedTopologyID / serverConfigs.length);
     var layoutID = mixedTopologyID % serverConfigs.length;
+    console.log("Mix:"+mixedTopologyID);
     console.log("Top:"+topologyID);
     console.log("Lay:"+layoutID);
   }
