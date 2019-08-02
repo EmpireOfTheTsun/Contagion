@@ -1,4 +1,4 @@
-Server.LocalMode = false;
+Server.LocalMode = true;
 Server.NeutralMode = true;
 Server.TrialMode = true;
 Server.NumberOfNodes = 20; //Changing this may require some refactoring...
@@ -19,7 +19,11 @@ Server.shuffle = function(a) {
 }
 
 Server.generatePerm = function(){
-  var list = [0,1,2,3,4,5,6,7,8];
+  var list = [0,1,2,3];
+  list = shuffle(list);
+  for (var i=0; i < 4; i++){
+    list.push(list[i]);
+  }
   return Server.shuffle(list);
 }
 
@@ -156,7 +160,7 @@ function Server(){
   Server.RoundLimit = 10;
   Server.AiMode = true;
   Server.InfectionMode = "wowee"; //"majority" or anything else
-  Server.AiStrategy = "random";//"SimpleGreedy";
+  Server.AiStrategy = "Predetermined";//"SimpleGreedy";
   Server.TokenProtocol = "Incremental"; //"AtStart" or "Incremental"
   Server.AiWaiting = false;
   Server.lastAlertTime = 0;
@@ -1024,19 +1028,21 @@ Server.submitMoves = function(message, ws){
   }
 }
 
-Server.getConfig = function(twoPlayerMode){
-  //picks a topology at random
-  var topologyID = Server.CurrentTopologyIndex;
-  Server.CurrentTopologyIndex = (Server.CurrentTopologyIndex + 1) % serverConfigs.length;
-
-  //P1 Topology
-  console.log("CHECK"+Server.CurrentTopologyLayoutIndexes);
-  var layoutID = Server.CurrentTopologyLayoutIndexes[topologyID];
-  console.log("INITIAL:"+layoutID);
-  Server.CurrentTopologyLayoutIndexes[topologyID] = (Server.CurrentTopologyLayoutIndexes[topologyID] + 1) % serverConfigs[topologyID].length;
-  console.log("AFTER(SHOULD BE SAME):"+layoutID);
-  console.log(serverConfigs[topologyID]);
-  var p2LayoutID = Server.CurrentTopologyLayoutIndexes[topologyID];
+Server.getConfig = function(twoPlayerMode, mixedTopologyID){
+  if (mixedTopologyID == null){
+    //picks a topology at random
+      var topologyID = Server.CurrentTopologyIndex;
+      Server.CurrentTopologyIndex = (Server.CurrentTopologyIndex + 1) % serverConfigs.length;
+    //P1 Topology
+    console.log("CHECK"+Server.CurrentTopologyLayoutIndexes);
+    var layoutID = Server.CurrentTopologyLayoutIndexes[topologyID];
+    Server.CurrentTopologyLayoutIndexes[topologyID] = (Server.CurrentTopologyLayoutIndexes[topologyID] + 1) % serverConfigs[topologyID].length;
+    var p2LayoutID = Server.CurrentTopologyLayoutIndexes[topologyID];
+    }
+  else{
+    var topologyID = Math.floor(mixedTopologyID / serverConfigs.length);
+    var layoutID = mixedTopologyID % serverConfigs.length;
+  }
 
   if(twoPlayerMode){
     //For a 2 player game, we want them to use the same topology but different layout. If there's no player two, the assignment on the previous line won't have any effect.
@@ -1083,8 +1089,9 @@ Server.sendClientMessage = function(message, ws){
 }
 
 Server.processUsername = function(username, ws){
-  console.log(Server.playerTopologies)
+  console.log(Server.playerTopologies);
   var found = Server.playerTopologies.find(function(item){
+    console.log("USER FOUND");
     if (item[0] == "username"){
       return item[1];
     }
@@ -1099,6 +1106,8 @@ Server.processUsername = function(username, ws){
   else{
     ws.permutation = found;
   }
+  console.log("Player "+username+" Topology Order:");
+  console.log(ws.permutation);
   // for (int i=0; i<Server.playerTopologies.length){
   //   if(Server.playerTopologies)
   // }
@@ -1107,11 +1116,12 @@ Server.processUsername = function(username, ws){
 }
 
 Server.newGame = function(username, ws){
+  console.log("Checking username "+username);
   if (username != null && username.length > 0){
     Server.processUsername(username, ws);
     ws.id = username; //just in case of collisions. Substring as database can only hold strings of certain length
     if (ws.id.length > 36){
-      ws.id = ws.id.subsctring(0,36); //prevent too long usernames from making the db fail to record games. Should be fine if we stick to uuid
+      ws.id = ws.id.substring(0,36); //prevent too long usernames from making the db fail to record games. Should be fine if we stick to uuid
     }
   }
   let gameTest = Server.CurrentGames.filter(gameState => {
@@ -1138,7 +1148,10 @@ Server.newGame = function(username, ws){
       Server.WaitingGameConfig = config;
     }
     else{
-      var config = Server.getConfig(false); //Don't need to retain the config for the next player if its vs the AI.
+      console.log("Previous Permutation (should shift)"+ws.permutation);
+      var config = Server.getConfig(false, ws.permutation); //Don't need to retain the config for the next player if its vs the AI.
+      ws.permutation.push(ws.permutation.shift());
+      console.log("Post-Shift Permutation"+ws.permutation);
     }
     var game = new GameState(config.network.peeps, config.network.connections, config.playerOneLayoutID, config.playerTwoLayoutID, config.laplacianID, ws);
     console.log("Laplaciantest:"+config.laplacianID);
@@ -1253,6 +1266,7 @@ Server.registerClick = function(payload, ws){
 //ws allows us to return a message to the client
 Server.ParseMessage = function(message, ws){
   try{
+
     message = JSON.parse(message);
   }
   catch(err){
@@ -1267,6 +1281,8 @@ Server.ParseMessage = function(message, ws){
       break;
     case "NEW_GAME_TOKEN":
       //Server.AiMode = false;
+      console.log("MSGCHECK");
+      console.log(message);
       Server.newGame(message.payload, ws);
       break;
     case "EMERGENCY_AI":
