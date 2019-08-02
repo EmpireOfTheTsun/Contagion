@@ -1033,8 +1033,8 @@ Server.submitMoves = function(message, ws){
   }
 }
 
-Server.getConfig = function(twoPlayerMode, mixedTopologyID){
-  if (mixedTopologyID == undefined){
+Server.getConfig = function(twoPlayerMode, perm){
+  if (perm == undefined){
     //picks a topology at random
       var topologyID = Server.CurrentTopologyIndex;
       Server.CurrentTopologyIndex = (Server.CurrentTopologyIndex + 1) % serverConfigs.length;
@@ -1043,8 +1043,9 @@ Server.getConfig = function(twoPlayerMode, mixedTopologyID){
     var layoutID = Server.CurrentTopologyLayoutIndexes[topologyID];
     Server.CurrentTopologyLayoutIndexes[topologyID] = (Server.CurrentTopologyLayoutIndexes[topologyID] + 1) % serverConfigs[topologyID].length;
     var p2LayoutID = Server.CurrentTopologyLayoutIndexes[topologyID];
-    }
+  }
   else{
+    var mixedTopologyID = perm[0];
     var topologyID = Math.floor(mixedTopologyID / serverConfigs.length);
     var layoutID = mixedTopologyID % serverConfigs.length;
     var p2LayoutID = layoutID; //TODO: make this work outside the trial
