@@ -166,7 +166,7 @@ function Server(){
   Server.lastAlertTime = 0;
   Server.demoMode = true;
   Server.heartbeatCheckFrequency = 100;
-  Server.heartAttackTime = 3000;
+  Server.heartAttackTime = 800;
 }
 
 Server();
@@ -375,8 +375,15 @@ class GameState {
     Server.sendSqlQuery(query, this);
   }
 
+
+  GameState.prototype.removeGame = async(game) => {
+    var index = Server.CurrentGames.indexOf(game);
+    Server.CurrentGames.splice(index, 1);
+    console.log("SEE ME No. games:"+Server.CurrentGames.length);
+  }
+
   //naturalEnd is true when the game ends by reaching the max number of rounds.
-  GameState.prototype.killGame = async(naturalEnd, game, causer) => {
+  GameState.prototype.killGame = function(naturalEnd, game, causer){
     ("game over");
     if(causer != null){
       try{
@@ -428,9 +435,7 @@ class GameState {
     clearTimeout(game.playerOneTimer);
     clearTimeout(game.playerTwoTimer);
 
-    var index = Server.CurrentGames.indexOf(this);
-    Server.CurrentGames.splice(index, 1);
-    console.log("No. games:"+Server.CurrentGames.length);
+    this.removeGame(game);
   }
 
   GameState.prototype.newTurn = function(){
