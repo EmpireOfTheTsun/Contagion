@@ -1046,7 +1046,7 @@ Server.getConfig = function(twoPlayerMode, mixedTopologyID){
     console.log("Top:"+topologyID);
     console.log("Lay:"+layoutID);
   }
-
+  console.log(serverConfigs);
   if(twoPlayerMode){
     //For a 2 player game, we want them to use the same topology but different layout. If there's no player two, the assignment on the previous line won't have any effect.
     Server.CurrentTopologyLayoutIndexes[topologyID] = (Server.CurrentTopologyLayoutIndexes[topologyID] + 1) % serverConfigs[topologyID].length;
