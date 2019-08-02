@@ -1,4 +1,4 @@
-Server.LocalMode = true;
+Server.LocalMode = false;
 Server.NeutralMode = true;
 Server.TrialMode = true;
 Server.NumberOfNodes = 20; //Changing this may require some refactoring...
