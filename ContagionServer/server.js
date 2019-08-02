@@ -1096,6 +1096,15 @@ Server.sendClientMessage = function(message, ws){
 }
 
 Server.processUsername = function(username, ws){
+  if (username == undefined){
+    username = uuidv4();
+  }
+  if (username == null){
+    username = uuidv4();
+  }
+  if (!username.length > 0){
+    username = uuidv4();
+  }
   console.log(Server.playerTopologies);
   var found = Server.playerTopologies.find(function(item){
     if (item[0] == "username"){
