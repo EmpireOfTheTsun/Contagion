@@ -1111,7 +1111,7 @@ Server.processUsername = function(username, ws){
     console.log(item);
     if (item[0] == username){
       console.log("USER FOUND");
-      return item[1];
+      ws.permutation = item[1];
     }
   });
   console.log("HELLOCHECKME");
@@ -1121,9 +1121,7 @@ Server.processUsername = function(username, ws){
     ws.permutation = perm;
     Server.playerTopologies.push([username, perm]);
   }
-  else{
-    ws.permutation = found;
-  }
+
   console.log("Player "+username+" Topology Order:");
   console.log(ws.permutation);
   // for (int i=0; i<Server.playerTopologies.length){
