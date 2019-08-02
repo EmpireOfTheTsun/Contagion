@@ -1165,7 +1165,12 @@ Server.newGame = function(username, ws){
     }
     else{
       console.log("Previous Permutation (should shift)"+ws.permutation);
-      var config = Server.getConfig(false, ws.permutation[0]); //Don't need to retain the config for the next player if its vs the AI.
+      try{
+      var config = Server.getConfig(false, ws.permutation); //Don't need to retain the config for the next player if its vs the AI.
+      }
+      catch(e){
+        config = Server.getConfig(false);
+      }
       ws.permutation.push(ws.permutation.shift());
       console.log("Post-Shift Permutation"+ws.permutation);
     }
