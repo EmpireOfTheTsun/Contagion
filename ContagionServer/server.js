@@ -10,7 +10,7 @@ Server.playerTopologies = [];
 
 console.log("Server starting!");
 
-Server.shuffle = function(a) {
+shuffle = function(a) {
   for (let i = a.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [a[i], a[j]] = [a[j], a[i]];
@@ -24,7 +24,7 @@ Server.generatePerm = function(){
   for (var i=0; i < 4; i++){
     list.push(list[i]);
   }
-  return Server.shuffle(list);
+  return shuffle(list);
 }
 
 //need nodeJS and uuid on the server
