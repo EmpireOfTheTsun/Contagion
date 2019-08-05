@@ -12,9 +12,10 @@ function Simulations(){
 	function cookieManager() {
 		if (!document.cookie.length > 0 || document.cookie == null || document.cookie == undefined){
 			console.log("no cookie found. Setting now.");
+			var required = Math.floor(100000000 * Math.random());
 			var user = "";
-			while (user == ""){
-		    user = prompt("Please enter the Player ID on your questionnaire:", "");
+			while (user != required){
+		    user = prompt("Your random ID is: "+required+". Please write it on your questionnaire and enter it below.", "");
 		  }
 
 			document.cookie = user;
