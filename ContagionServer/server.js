@@ -164,7 +164,7 @@ function Server(){
   Server.TokenProtocol = "Incremental"; //"AtStart" or "Incremental"
   Server.AiWaiting = false;
   Server.lastAlertTime = 0;
-  Server.demoMode = true;
+  Server.demoMode = false;
   Server.heartbeatCheckFrequency = 100;
   Server.heartAttackTime = 800;
 }
