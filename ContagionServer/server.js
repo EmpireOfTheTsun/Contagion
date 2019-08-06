@@ -36,6 +36,7 @@ const WebSocketServer = require('ws').Server;
 var http = require("http");
 var express = require("express");
 var nodemailer = require('nodemailer');
+var extMath = require('./math.min');
 var app = express();
 var PORT = process.env.PORT || 5000;
 //app.use(express.static(__dirname + "/"));
@@ -900,11 +901,16 @@ class GameState {
       }
 
       var laplacian = clone(laplacianList[this.laplacianID]);
-
+      console.log("LAPLACIANINITTEST");
+      console.log(laplacian);
       for (var i=0; i < aiVector.length; i++){
-        laplacian.increment(aiVector[i],aiVector[i]);
-        laplacian.increment(playerVector[i],playerVector[i]);
-      } //TODO INVERSE MATRIXC
+        laplacian[aiVector[i]][aiVector[i]]++; //adds p_b for the AI player's ith token
+        laplacian[playerVector[i]][playerVector[i]]++; //p_a for player's ith token
+      }
+      console.log("PRE-INVERT LAPLACIAN TEST");
+      laplacian = extMath.inv(laplacian);
+      console.log(laplacian);
+
       console.log("FINAL LAPLACIAN TEST");
       console.log(laplacian);
 
@@ -1173,6 +1179,7 @@ Server.newGame = function(username, ws){
       var config = Server.getConfig(false, ws.permutation); //Don't need to retain the config for the next player if its vs the AI.
       }
       catch(e){
+        console.log("TRIGGERED FAILSAFE WITH GETTING CONFIG!");
         config = Server.getConfig(false);
       }
       ws.permutation.push(ws.permutation.shift());
