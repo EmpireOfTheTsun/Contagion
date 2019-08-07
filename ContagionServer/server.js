@@ -1,6 +1,6 @@
-Server.LocalMode = false;
+Server.LocalMode = true;
 Server.NeutralMode = true;
-Server.TrialMode = true;
+Server.TrialMode = false;
 Server.NumberOfNodes = 20; //Changing this may require some refactoring...
 Server.TestMoves = [[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
 [ 6, 5, 12, 5, 2, 17, 7, 18, 9, 9 ],
@@ -161,7 +161,7 @@ function Server(){
   Server.RoundLimit = 10;
   Server.AiMode = true;
   Server.InfectionMode = "wowee"; //"majority" or anything else
-  Server.AiStrategy = "Predetermined";//"SimpleGreedy";
+  Server.AiStrategy = "Equilibrium";//"Predetermined";//"SimpleGreedy";
   Server.TokenProtocol = "Incremental"; //"AtStart" or "Incremental"
   Server.AiWaiting = false;
   Server.lastAlertTime = 0;
@@ -252,7 +252,7 @@ class GameState {
     p1MovesString = p1MovesString.slice(0, -1);
 
     var p2MovesString = "";
-    this.playerOneMoves.forEach(function (move){
+    this.playerTwoMoves.forEach(function (move){
       p2MovesString = p2MovesString + move + "_";
     });
     p2MovesString = p2MovesString.slice(0, -1);
@@ -264,8 +264,11 @@ class GameState {
 
   GameState.prototype.addPlayerMoves = function(moves, isPlayerOne, opponentReady){
 
-    //Performs AI moves before recording player moves (to prevent bias)
+    //Performs AI moves before recording new player moves (to prevent bias)
+
     this.aiCheck();
+    this.playerOneMoves = [];
+    this.playerTwoMoves = [];
     isPlayerOne ? (this.playerOneMoves = moves) : (this.playerTwoMoves = moves);
     if (opponentReady){
       if (Server.AiWaiting == true && (this.playerTwo == "AI" || this.playerOne == "AI")){
@@ -519,8 +522,6 @@ class GameState {
       var payload = [peepsToSend, movesToSend, this.playerTwoScore];
       Server.sendClientMessage(new Message(payload, "UPDATE_STATE_TOKEN"), this.playerTwo);
     }
-    this.playerOneMoves = [];
-    this.playerTwoMoves = [];
   }
 
   //NB: INFECTED/UNINFECTED IS FROM POV OF PLAYER1!
@@ -606,6 +607,7 @@ class GameState {
       this.aiTurnPredetermined(aiMoves, oneNodeOnly);
       return;
     }
+    console.log("FFFF "+this.playerOneMoves);
     switch(Server.AiStrategy){
       case "SimpleGreedy":
         this.aiTurnSimpleGreedy(aiMoves, oneNodeOnly);
@@ -882,48 +884,65 @@ class GameState {
   }
 
   //Strategy to maximise score at some time-insensitive equilibrium
-  GameState.prototype.aiTurnEquilibrium = function(aiMoves, oneNodeOnly){
+  GameState.prototype.aiTurnEquilibrium = function(aiMoves, oneNodeOnly){ //FUTURE ME: THere's some scoping issue with this.playeronemoves, or aimoves.
     //adds one token when the token protocol is incremental
+    if (this.prevAiMoves.length == 0){
+      this.aiTurnRandom(aiMoves, oneNodeOnly);
+    }
     console.log("PARAMETERCHECK");
-    console.log(aiMoves);
-    console.log(oneNodeOnly);
+    console.log(this.prevAiMoves);
+    console.log(this.playerOneMoves);
     if(Server.TokenProtocol == "Incremental"){
-      var aiVector; //We want to find the best value for this, as we are playing as the AI here.
+      var aiVector = this.prevAiMoves; //We want to find the best value for this, as we are playing as the AI here.
       var playerVector;
 
       if(this.playerTwo == "AI"){
-        aiVector = this.playerTwoMoves;
         playerVector = this.playerOneMoves;
       }
       else{
-        aiVector = this.playerOneMoves;
         playerVector = this.playerTwoMoves;
       }
 
-      var laplacian = clone(laplacianList[this.laplacianID]);
-      console.log("LAPLACIANINITTEST");
-      console.log(laplacian);
+      var aiMovesArray = [];
+      for (var i = 0; i < Server.NumberOfNodes; i++){
+        aiMovesArray.push(0);
+      }
+
+      var laplacian = clone(laplaciansList[this.laplacianID]);
+      //console.log("LAPLACIANINITTEST");
+      //console.log(laplacian);
       for (var i=0; i < aiVector.length; i++){
+        console.log("OOF "+aiVector[i]);
         laplacian[aiVector[i]][aiVector[i]]++; //adds p_b for the AI player's ith token
         laplacian[playerVector[i]][playerVector[i]]++; //p_a for player's ith token
+        aiMovesArray[aiVector[i]]++; //Also creates the vector of ai moves at the same time
+        //This is required as aiVector is length n-1, where n is the round number. We need length 20 for matrix.
       }
-      console.log("PRE-INVERT LAPLACIAN TEST");
-      laplacian = extMath.inv(laplacian);
-      console.log(laplacian);
+      //console.log("PRE-INVERT LAPLACIAN TEST");
+      //console.log(laplacian);
 
-      console.log("FINAL LAPLACIAN TEST");
-      console.log(laplacian);
+      var laplacianTEST = extMath.inv(laplacian);
+      //console.log("FINAL LAPLACIAN TEST (MINI)");
+      //console.log(laplacianTEST[0]);
+
 
       var maxScore = 0;
+      var bestNode = -1;
+      console.log("TESTME");
+      console.log(aiMovesArray);
       for (var i=0; i < Server.NumberOfNodes; i++){
+        var probabilitiesVector = this.createProbabilitiesVector(laplacian, aiMovesArray, i);
+        var selectionFitness = this.calculateFitness(probabilitiesVector);
+        console.log("Node: "+i+" Fitness: "+selectionFitness);
+        console.log("Vector:"+probabilitiesVector);
 
+        if (selectionFitness > maxScore){
+          maxScore = selectionFitness;
+          bestNode = i;
+        }
       }
-
-      var probabilitiesVector = this.createProbabilitiesVector(laplacian, aiVector, playerVector);
-      var selectionFitness = this.calculateFitness(probabilitiesVector);
-
-
-      var peepIndex = maxScore;
+      console.log("BEST IS "+bestNode);
+      var peepIndex = bestNode;
       this.prevAiMoves.push(peepIndex);
       this.prevAiMoves.forEach(function(move){
         aiMoves.push(move);
@@ -935,21 +954,21 @@ class GameState {
     }
   }
 
-  GameState.prototype.createProbabilitiesVector = function(laplacian, aiVector, playerVector){
-    for (var i=0; i < Server.NumberOfNodes; i++){
-      for (var j=0; j < Server.NumberOfNodes; j++){
-        if (i=j){
+  GameState.prototype.createProbabilitiesVector = function(laplacian, aiMovesArray, i){
+    laplacian[i][i]++;
+    aiMovesArray[i]++; //adds the token to test to the node. This affects both L and p_b (ai moves)
 
-        }
-        else{
+    var invLaplacian = extMath.inv(laplacian);
+    var probVector = extMath.multiply(aiMovesArray, invLaplacian);
 
-        }
-      }
-    }
+    laplacian[i][i]--;
+    aiMovesArray[i]--; //reverts the change to this var to avoid an expensive clone operation
+    return probVector;
+
   }
 
   GameState.prototype.calculateFitness = function(probabilitiesVector){
-
+    return extMath.sum(probabilitiesVector); //adds all values in the array
   }
 
   GameState.prototype.aiTurnPredetermined = function(aiMoves, oneNodeOnly){

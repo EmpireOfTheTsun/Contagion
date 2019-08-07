@@ -142,8 +142,9 @@ function createLaplacian(connections){
 		laplacian[node2][node1]--; //subtracts the adjacency matrix
 
 	}
-	//console.log("COMPLETELAPTEST");
-	//console.log(laplacian);
+	console.log("-----------------------------");
+	console.log(connections);
+	console.log(laplacian);
 
 	return laplacian;
 }

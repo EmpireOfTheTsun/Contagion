@@ -6,13 +6,13 @@ I have made an attempt to refactor things into the overall Simulations class, bu
 
 //SIM DELARED AT 167
 function Simulations(){
-	Simulations.LocalMode = false;
+	Simulations.LocalMode = true;
 	Simulations.Username = "";
 
 	function cookieManager() {
-		if (!document.cookie.length > 0 || document.cookie == null || document.cookie == undefined){
+		if (!(document.cookie.length > 0) || document.cookie == null || document.cookie == undefined){
 			console.log("no cookie found. Setting now.");
-			var required = Math.floor(100000000 * Math.random());
+			var required = 1;//Math.floor(100000000 * Math.random());
 			var user = "";
 			while (user != required){
 		    user = prompt("Your random ID is: "+required+". Please write it on your questionnaire and enter it below.", "");
