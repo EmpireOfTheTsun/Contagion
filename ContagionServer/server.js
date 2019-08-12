@@ -667,7 +667,7 @@ class GameState {
 
 
   //Strategy to maximise score at some time-insensitive equilibrium
-  GameState.prototype.aiTurnEquilibrium = function(aiMoves, oneNodeOnly){ //FUTURE ME: THere's some scoping issue with this.playeronemoves, or aimoves.
+  GameState.prototype.aiTurnEquilibrium = function(aiMoves, oneNodeOnly){
     //adds one token when the token protocol is incremental
     if (this.prevAiMoves.length == 0){
       this.aiTurnRandom(aiMoves, oneNodeOnly);
@@ -678,47 +678,55 @@ class GameState {
     console.log(this.playerOneMoves);
     if(Server.TokenProtocol == "Incremental"){
       var aiVector = this.prevAiMoves; //We want to find the best value for this, as we are playing as the AI here.
-      var playerVector;
+      var playerMovesList;
 
       if(this.playerTwo == "AI"){
-        playerVector = this.playerOneMoves;
+        playerMovesList = this.playerOneMoves;
       }
       else{
-        playerVector = this.playerTwoMoves;
+        playerMovesList = this.playerTwoMoves;
       }
-      var aiMovesArray = [];
+      var aiMovesVector = [];
+      var playerMovesVector = [];
       for (var i = 0; i < Server.NumberOfNodes; i++){
-        aiMovesArray.push(0);
+        aiMovesVector.push(0);
+        playerMovesVector.push(0);
       }
 
       var laplacian = clone(laplaciansList[this.laplacianID]);
-      console.log("BEGIN");
+      console.log("L (without Pa/Pb):");
       console.log(laplacian);
-      console.log(playerVector);
+
       //console.log("LAPLACIANINITTEST");
       //console.log(laplacian);
-
       for (var i=0; i < aiVector.length; i++){
         laplacian[aiVector[i]][aiVector[i]]++; //adds p_b for the AI player's ith token
-        laplacian[playerVector[i]][playerVector[i]]++; //p_a for player's ith token
-        aiMovesArray[aiVector[i]]++; //Also creates the vector of ai moves at the same time
+        laplacian[playerMovesList[i]][playerMovesList[i]]++; //p_a for player's ith token
+        aiMovesVector[aiVector[i]]++; //Also creates the vector of ai moves at the same time
+        playerMovesVector[playerMovesList[i]]++;
         //This is required as aiVector is length n-1, where n is the round number. We need length 20 for matrix.
       }
+      console.log("Pb");
+      console.log(playerMovesVector);
       //console.log("PRE-INVERT LAPLACIAN TEST");
       //console.log(laplacian);
 
+      console.log("L+diag(Pa+Pb)^-1 BEFORE LATEST MOVES");
       var laplacianTEST = extMath.inv(laplacian);
       //console.log("FINAL LAPLACIAN TEST (MINI)");
-      //console.log(laplacianTEST[0]);
+      console.log(laplacianTEST[0]);
 
 
       var maxScore = 0;
       var bestNode = -1;
+      bestPa = [];
+      bestUa = [];
+      bestInvMatrix = [];
 
-      //console.log(aiMovesArray);
+      //console.log(aiMovesVector);
       for (var i=0; i < Server.NumberOfNodes; i++){
         console.log("NODE "+i);
-        var probabilitiesVector = this.createProbabilitiesVector(laplacian, aiMovesArray, i);
+        var probabilitiesVector = this.createProbabilitiesVector(laplacian, aiMovesVector, i, false);
         var selectionFitness = this.calculateFitness(probabilitiesVector);
         //console.log("Node: "+i+" Fitness: "+selectionFitness);
         //console.log("Vector:"+probabilitiesVector);
@@ -729,6 +737,7 @@ class GameState {
         }
       }
       console.log("BEST IS "+bestNode);
+      this.createProbabilitiesVector(laplacian, aiMovesVector, bestNode, true);
       var peepIndex = bestNode;
       this.prevAiMoves.push(peepIndex);
       this.prevAiMoves.forEach(function(move){
@@ -741,17 +750,23 @@ class GameState {
     }
   }
 
-  GameState.prototype.createProbabilitiesVector = function(laplacian, aiMovesArray, i){
+  GameState.prototype.createProbabilitiesVector = function(laplacian, aiMovesVector, i, isLogging){
     laplacian[i][i]++;
-    aiMovesArray[i]++; //adds the token to test to the node. This affects both L and p_b (ai moves)
+    aiMovesVector[i]++; //adds the token to test to the node. This affects both L and p_b (ai moves)
 
     var invLaplacian = extMath.inv(laplacian);
-    var probVector = extMath.multiply(aiMovesArray, invLaplacian);
-    console.log(aiMovesArray);
-    console.log(probVector);
+    var probVector = extMath.multiply(aiMovesVector, invLaplacian);
+    if (isLogging == true){
+      console.log("Pa:");
+      console.log(aiMovesVector);
+      console.log("Ua:");
+      console.log(probVector);
+      console.log("Inverted Matrix:");
+      console.log(invLaplacian);
+    }
 
     laplacian[i][i]--;
-    aiMovesArray[i]--; //reverts the change to this var to avoid an expensive clone operation
+    aiMovesVector[i]--; //reverts the change to this var to avoid an expensive clone operation
     return probVector;
 
   }
