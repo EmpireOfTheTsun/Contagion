@@ -7,7 +7,9 @@ Server.TestMoves = [[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
 [ 6, 5, 12, 5, 2, 17, 7, 18, 9, 9 ],
 [ 7, 12, 9, 13, 13, 1, 4, 19, 10, 19 ]];
 Server.playerTopologies = [];
-Server.ExponentStrength = 0.25;
+Server.ExponentStrength = 0.25; //Higher = more bias to high/low degree nodes in their respective strategies
+Server.ExistingTokensBias = -1; //Increases likelihood of placing tokens on nodes that already have tokens. Negative reduces the likelihood.
+//Does not affect random, equilibrium or predetermined strategies.
 
 
 console.log("Server starting!");
@@ -625,7 +627,7 @@ class GameState {
         this.aiTurnDegreeSensitive(aiMoves, oneNodeOnly, true); //True for low degree preference
         break;
       case "DegreeSensitiveHigh":
-        this.aiTurnDegreeSensitiveTest(aiMoves, oneNodeOnly, false);
+        this.aiTurnDegreeSensitive(aiMoves, oneNodeOnly, false);
         break;
       default:
         this.aiTurnRandom(aiMoves, oneNodeOnly);
@@ -787,9 +789,20 @@ class GameState {
     if(Server.TokenProtocol == "Incremental"){
       var nodeWeights = [];
       var laplacian = clone(laplaciansList[this.laplacianID]);
-
+      console.log("LAP PRE BIAS");
+      console.log(laplacian);
+      if (Server.ExistingTokensBias != 0){
+        for(var i=0; i < this.prevAiMoves.length; i++){
+          var token = this.prevAiMoves[i];
+          console.log("Affecting token: "+token);
+          laplacian[token][token] += Server.ExistingTokensBias;
+        }
+      }
+      console.log("LAP POST BIAS");
+      console.log(laplacian);
       for (var i=0; i < Server.NumberOfNodes; i++){
         var nodeDegree = laplacian[i][i];
+
         if(lowDegreeSensitivity){
           console.log("IS LOW SENSITIVE");
           var nodeWeight = extMath.exp(Server.ExponentStrength*nodeDegree*-1); //negative exponent weights high degree nodes lower
