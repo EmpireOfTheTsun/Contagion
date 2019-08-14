@@ -7,6 +7,7 @@ Server.TestMoves = [[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
 [ 6, 5, 12, 5, 2, 17, 7, 18, 9, 9 ],
 [ 7, 12, 9, 13, 13, 1, 4, 19, 10, 19 ]];
 Server.playerTopologies = [];
+Server.ExponentStrength = 0.25;
 
 
 console.log("Server starting!");
@@ -162,7 +163,7 @@ function Server(){
   Server.RoundLimit = 10;
   Server.AiMode = true;
   Server.InfectionMode = "wowee"; //"majority" or anything else
-  Server.AiStrategy = "Equilibrium";//"Predetermined";//"SimpleGreedy";
+  Server.AiStrategy = "DegreeSensitiveHigh";//"Equilibrium";//"Predetermined";//"SimpleGreedy";
   Server.TokenProtocol = "Incremental"; //"AtStart" or "Incremental"
   Server.AiWaiting = false;
   Server.lastAlertTime = 0;
@@ -621,10 +622,10 @@ class GameState {
         this.aiTurnEquilibrium(aiMoves, oneNodeOnly);
         break;
       case "DegreeSensitiveLow":
-        this.aiTurnLowDegree(aiMoves, oneNodeOnly);
+        this.aiTurnDegreeSensitive(aiMoves, oneNodeOnly, true); //True for low degree preference
         break;
       case "DegreeSensitiveHigh":
-        this.aiTurnHighDegree(aiMoves, oneNodeOnly);
+        this.aiTurnDegreeSensitiveTest(aiMoves, oneNodeOnly, false);
         break;
       default:
         this.aiTurnRandom(aiMoves, oneNodeOnly);
@@ -719,9 +720,7 @@ class GameState {
 
       var maxScore = 0;
       var bestNode = -1;
-      bestPa = [];
-      bestUa = [];
-      bestInvMatrix = [];
+
 
       //console.log(aiMovesVector);
       for (var i=0; i < Server.NumberOfNodes; i++){
@@ -775,12 +774,69 @@ class GameState {
     return extMath.sum(probabilitiesVector); //adds all values in the array
   }
 
-  GameState.prototype.aiTurnLowDegree = function(aiMoves, oneNodeOnly){
-
+  GameState.prototype.aiTurnDegreeSensitiveTest = function(aiMoves, oneNodeOnly, lowDegreeSensitivity){
+    for (var i=0; i < 6; i++){
+      Server.ExponentStrength = 0.25 + i*0.05;
+      console.log("--------------------------------------");
+      console.log("STRENGTH = "+Server.ExponentStrength);
+      this.aiTurnDegreeSensitive(aiMoves, oneNodeOnly, lowDegreeSensitivity);
+    }
   }
 
-  GameState.prototype.aiTurnHighDegree = function(aiMoves, oneNodeOnly){
+  GameState.prototype.aiTurnDegreeSensitive = function(aiMoves, oneNodeOnly, lowDegreeSensitivity){
+    if(Server.TokenProtocol == "Incremental"){
+      var nodeWeights = [];
+      var laplacian = clone(laplaciansList[this.laplacianID]);
 
+      for (var i=0; i < Server.NumberOfNodes; i++){
+        var nodeDegree = laplacian[i][i];
+        if(lowDegreeSensitivity){
+          console.log("IS LOW SENSITIVE");
+          var nodeWeight = extMath.exp(Server.ExponentStrength*nodeDegree*-1); //negative exponent weights high degree nodes lower
+        }
+        else{
+          //console.log("IS HIGH SENSITIVE");
+          var nodeWeight = extMath.exp(Server.ExponentStrength*nodeDegree);
+        }
+        nodeWeights.push(nodeWeight);
+      }
+      console.log("NODEWEIGHTS");
+      var max = extMath.sum(nodeWeights);
+
+      var monte = [];
+      for (var i=0; i < Server.NumberOfNodes; i++){
+        nodeWeights[i] = nodeWeights[i] * 100 / max; //normalises the list, becomes % chance to pick
+        monte.push(0);
+      }
+      console.log(nodeWeights);
+      for (var i=0; i < 100000; i++){
+          monte[this.chooseFromDistribution(nodeWeights, 100)]++;
+      }
+      console.log("MONTE");
+      console.log(monte);
+
+      var peepIndex = this.chooseFromDistribution(nodeWeights, 100);
+      console.log("CHOSEN: "+peepIndex);
+      this.prevAiMoves.push(peepIndex);
+      this.prevAiMoves.forEach(function(move){
+        aiMoves.push(move);
+      });
+      return;
+    }
+    else{
+      console.log("ERROR! This algorithm hasn't been developed for non-incremental protocol yet!");
+    }
+  }
+
+  GameState.prototype.chooseFromDistribution = function(distribution, maxValue){
+    var rand = Math.random() * maxValue;
+    for (var i=0; i<distribution.length; i++){
+      rand -= distribution[i];
+      if (rand < 0){
+        return i;
+      }
+    }
+    console.log("ERROR CHOOSING FROM DISTRIBUTION!");
   }
 
 
@@ -788,7 +844,7 @@ class GameState {
     var peepIndex = this.predeterminedAIMoves[this.roundNumber];
     console.log(this.predeterminedAIMoves);
     console.log(peepIndex);
-    console.log("---------CHECKME-------------");
+    console.log("---------CHECKMEPREDETERMINED-------------");
     this.prevAiMoves.push(peepIndex);
     this.prevAiMoves.forEach(function(move){
       aiMoves.push(move);
