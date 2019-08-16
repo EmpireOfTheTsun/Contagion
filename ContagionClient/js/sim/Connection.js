@@ -13,6 +13,7 @@ function Connection(config){
 		img: "line",
 		frames:1, sw:300, sh:20,
 	});
+	console.log(self.sprite.config.sw);
 	self.sprite.pivotX = 2.8;
 	self.sprite.pivotY = 10;
 
@@ -49,7 +50,11 @@ function Connection(config){
 		}
 
 		self.sprite.scaleX = dist/300;
-		self.sprite.scaleY = 0.4;
+		var thickScale = 0.4;
+		if (self.sprite.extraThickness != undefined){
+			thickScale += self.sprite.extraThickness;
+		}
+		self.sprite.scaleY = thickScale;
 		//self.sprite.scaleY *= s;
 		//self.sprite.rotation = a;
 		self.sprite.draw(ctx);

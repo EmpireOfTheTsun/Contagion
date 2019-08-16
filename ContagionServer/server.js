@@ -353,25 +353,27 @@ class GameState {
 
   GameState.prototype.heartbeatHandler = function(game){
     var now = Date.now();
-    if (now - game.playerOneLastHeartbeat > Server.heartAttackTime){
-      console.log("Heart attack1!");
-      try{
-        Server.sendResults(2, game, "disconnect");
+    if (!Server.demoMode){
+      if (now - game.playerOneLastHeartbeat > Server.heartAttackTime){
+        console.log("Heart attack1!");
+        try{
+          Server.sendResults(2, game, "disconnect");
+        }
+        catch(e){
+          console.log("Error when sending gameend msg: "+e);
+        }
+        game.killGame(false, game);
       }
-      catch(e){
-        console.log("Error when sending gameend msg: "+e);
+      if(game.playerTwo !== "AI" && game.playerTwo !== null && now-game.playerTwoLastHeartbeat > Server.heartAttackTime){
+        console.log("Heart attack2!");
+        try{
+          Server.sendResults(1, game, "disconnect");
+        }
+        catch(e){
+          console.log("Error when sending gameend msg: "+e);
+        }
+        game.killGame(false, game);
       }
-      game.killGame(false, game);
-    }
-    if(game.playerTwo !== "AI" && game.playerTwo !== null && now-game.playerTwoLastHeartbeat > Server.heartAttackTime){
-      console.log("Heart attack2!");
-      try{
-        Server.sendResults(1, game, "disconnect");
-      }
-      catch(e){
-        console.log("Error when sending gameend msg: "+e);
-      }
-      game.killGame(false, game);
     }
   }
 
@@ -777,29 +779,42 @@ class GameState {
   }
 
   GameState.prototype.aiTurnDegreeSensitiveTest = function(aiMoves, oneNodeOnly, lowDegreeSensitivity){
+    var monteOrig = [];
+    for (var i=0; i < Server.NumberOfNodes; i++){
+      monteOrig.push(0);
+    }
+
     for (var i=0; i < 6; i++){
       Server.ExponentStrength = 0.25 + i*0.05;
-      console.log("--------------------------------------");
-      console.log("STRENGTH = "+Server.ExponentStrength);
-      this.aiTurnDegreeSensitive(aiMoves, oneNodeOnly, lowDegreeSensitivity);
+      for (var j=0; j < 5; j++){
+        Server.ExistingTokensBias = 0 - 0.5*j;
+        var monte = clone(monteOrig);
+        for (var iter=0; iter < 10000; iter++){
+          this.prevAiMoves = [];
+          for (var round=0; round < 10; round++){
+            this.aiTurnDegreeSensitive(aiMoves, oneNodeOnly, lowDegreeSensitivity, monte);
+          }
+        }
+        console.log("STR="+Server.ExponentStrength+" BIAS="+Server.ExistingTokensBias);
+        for (var x=0; x < Server.NumberOfNodes; x++){
+          monte[x] = monte[x] / 10000;
+        }
+        console.log(monte);
+      }
+
     }
   }
 
-  GameState.prototype.aiTurnDegreeSensitive = function(aiMoves, oneNodeOnly, lowDegreeSensitivity){
+  GameState.prototype.aiTurnDegreeSensitive = function(aiMoves, oneNodeOnly, lowDegreeSensitivity, monte){
     if(Server.TokenProtocol == "Incremental"){
       var nodeWeights = [];
       var laplacian = clone(laplaciansList[this.laplacianID]);
-      console.log("LAP PRE BIAS");
-      console.log(laplacian);
       if (Server.ExistingTokensBias != 0){
         for(var i=0; i < this.prevAiMoves.length; i++){
           var token = this.prevAiMoves[i];
-          console.log("Affecting token: "+token);
           laplacian[token][token] += Server.ExistingTokensBias;
         }
       }
-      console.log("LAP POST BIAS");
-      console.log(laplacian);
       for (var i=0; i < Server.NumberOfNodes; i++){
         var nodeDegree = laplacian[i][i];
 
@@ -813,27 +828,22 @@ class GameState {
         }
         nodeWeights.push(nodeWeight);
       }
-      console.log("NODEWEIGHTS");
       var max = extMath.sum(nodeWeights);
 
-      var monte = [];
-      for (var i=0; i < Server.NumberOfNodes; i++){
-        nodeWeights[i] = nodeWeights[i] * 100 / max; //normalises the list, becomes % chance to pick
-        monte.push(0);
-      }
-      console.log(nodeWeights);
-      for (var i=0; i < 100000; i++){
-          monte[this.chooseFromDistribution(nodeWeights, 100)]++;
-      }
-      console.log("MONTE");
-      console.log(monte);
+      //nodeWeights[i] = nodeWeights[i] * 100 / max; //normalises the list, becomes % chance to pick
 
-      var peepIndex = this.chooseFromDistribution(nodeWeights, 100);
-      console.log("CHOSEN: "+peepIndex);
+      //console.log(nodeWeights);
+      // for (var i=0; i < 10000; i++){
+      //     monte[this.chooseFromDistribution(nodeWeights, 100)]++;
+      // }
+      //console.log(monte);
+
+      var peepIndex = this.chooseFromDistribution(nodeWeights, max);
       this.prevAiMoves.push(peepIndex);
-      this.prevAiMoves.forEach(function(move){
-        aiMoves.push(move);
-      });
+      monte[peepIndex]++;
+      // this.prevAiMoves.forEach(function(move){
+      //   aiMoves.push(move);
+      // });
       return;
     }
     else{
@@ -882,8 +892,8 @@ class GameState {
   }
 
   GameState.prototype.outOfTime = function(isPlayerOne){
-    console.log("!!!!OUTTATIME: "+isPlayerOne);
     if(!Server.demoMode){
+      console.log("!!!!OUTTATIME: "+isPlayerOne);
       if (isPlayerOne){
         Server.sendResults(1, game, "time");
         Server.sendResults(2, game, "disconnect");

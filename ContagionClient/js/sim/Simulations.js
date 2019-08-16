@@ -1266,6 +1266,33 @@ function Sim(config){
 		else target.aiOrbits = [];
 	}
 
+	self.highlightEdges = function(peep, recursive){
+		for(var i=self.connections.length-1; i>=0; i--){ // backwards index coz we're deleting
+			var c = self.connections[i];
+			if(c.from==peep || c.to==peep){ // in either direction
+				if ()
+				if(recursive){
+					c.sprite.extraThickness = 0.9;
+
+					if (c.from==peep){
+						self.highlightEdges(c.to, false);
+					}
+
+					else{
+						self.highlightEdges(c.from,false);
+					}
+
+				}
+
+			}
+			else{
+				if(recursive){
+					c.sprite.extraThickness = 0;
+				}
+			}
+		}
+	}
+
 	self.sendClick = function(nodeID, action){
 		var payload = [];
 		payload.push(nodeID);
