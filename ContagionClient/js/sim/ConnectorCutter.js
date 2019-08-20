@@ -100,7 +100,12 @@ function ConnectorCutter(config){
 				if(!Simulations.IS_RUNNING){
 					var peepHovered = self.sim.getHoveredPeep(20);
 					pencil.gotoFrame( peepHovered ? 1 : 0 );
-					self.sim.highlightEdges(peepHovered, true);
+					if (peepHovered){
+						self.sim.highlightEdges(peepHovered, true);
+					}
+					else{
+						self.sim.resetEdges();
+					}
 				}else{
 					pencil.gotoFrame(0);
 				}

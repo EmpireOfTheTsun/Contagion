@@ -50,9 +50,12 @@ function Connection(config){
 		}
 
 		self.sprite.scaleX = dist/300;
-		var thickScale = 0.4;
+		var thickScale = 0.5;
 		if (self.sprite.extraThickness != undefined){
 			thickScale += self.sprite.extraThickness;
+		}
+		if (self.sprite.opacity != undefined){
+			ctx.globalAlpha = self.sprite.opacity;
 		}
 		self.sprite.scaleY = thickScale;
 		//self.sprite.scaleY *= s;

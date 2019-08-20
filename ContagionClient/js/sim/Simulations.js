@@ -1267,13 +1267,13 @@ function Sim(config){
 	}
 
 	self.highlightEdges = function(peep, recursive){
-		for(var i=self.connections.length-1; i>=0; i--){ // backwards index coz we're deleting
+		var peepsToRecurse = []; //Stores peeps that are one degree away
+		for(var i=self.connections.length-1; i>=0; i--){
 			var c = self.connections[i];
 			if(c.from==peep || c.to==peep){ // in either direction
-				if ()
 				if(recursive){
-					c.sprite.extraThickness = 0.9;
-
+					c.sprite.opacity = 1;
+					c.sprite.extraThickness = 0.25;
 					if (c.from==peep){
 						self.highlightEdges(c.to, false);
 					}
@@ -1283,13 +1283,29 @@ function Sim(config){
 					}
 
 				}
-
+				else{
+					if (c.sprite.opacity < 0.9){ //prevents overwriting 1st degree connection thickness
+						c.sprite.opacity = 0.7;
+						c.sprite.extraThickness = 0;
+					}
+				}
 			}
 			else{
 				if(recursive){
-					c.sprite.extraThickness = 0;
+					if (c.sprite.opacity < 0.7){ //prevents overwriting 2nd degree connection thickness
+						c.sprite.opacity = 0.2;
+						c.sprite.extraThickness = -0.3;
+					}
 				}
 			}
+		}
+	}
+
+	self.resetEdges = function(){
+		for(var i=self.connections.length-1; i>=0; i--){
+			var c = self.connections[i];
+			c.sprite.opacity = 0.5;
+			c.sprite.extraThickness = 0;
 		}
 	}
 
