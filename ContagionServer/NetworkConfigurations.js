@@ -118,7 +118,6 @@ async function loadConfigs() {
 }
 
 function createLaplacian(connections){
-	//var laplacian = new Array2D(Server.NumberOfNodes, Server.NumberOfNodes, 0);
 
 	var laplacian = [];
 	for (var y=0; y<Server.NumberOfNodes; y++){

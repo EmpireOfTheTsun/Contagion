@@ -5,183 +5,140 @@ GameState.prototype.aiTurnSimpleGreedy = function(aiMoves, removeOld){
   //array of [AI(friendly from this POV), Player(enemy)] moves
 
   console.log("SimpleGreedy: "+aiMoves);
-  var tokensArray;
-  tokensArray = [this.playerTwoMoves, this.playerOneMoves];
   friendlyNodeStatus = 0;
   console.log("Prevmovecheck for greedy onetoken");
   console.log(this.prevAiMoves);
+
+  var tokenInfluences = this.createTokenInfluencesList();
+
   if(removeOld){
-    var index = this.worstTokenGreedy(this.prevAiMoves, tokensArray, friendlyNodeStatus);
-    this.prevAiMoves.splice(index, 1);
+    this.greedyNodeSelection(friendlyNodeStatus, tokenInfluences, true); //true to remove worst
   }
-  var peepIndex = this.bestNodeGreedy(tokensArray, friendlyNodeStatus);
-  this.prevAiMoves.push(peepIndex);
-  this.prevAiMoves.forEach(function(peep){
-    aiMoves.push(peep); //TODO: move this to the main AI move function, no need to repeat code for each strategy.
-  });
-  console.log(aiMoves);
+  else{
+    this.greedyNodeSelection(friendlyNodeStatus, tokenInfluences, false); //false to just add best
+  }
   console.log("DONE");
 }
 
 //returns the id of the best node by fitness, using a greedy strategy
-GameState.prototype.bestNodeGreedy = function(tokensArray, friendlyNodeStatus){
+GameState.prototype.greedyNodeSelection = function(friendlyNodeStatus, tokenInfluences, findWorst){
   var bestNodesID = [-1];
   var bestNodeValue = -1;
+
+  if (findWorst){
+    var worstTokensID = [-1];
+    var worstTokenValue = 100;
+    console.log("worsttokengreedy");
+  }
   console.log("bestgreedy");
   for(i=0; i<this.formattedPeeps.length; i++){
-    var fitness = this.greedyFitnessChange(i, tokensArray, friendlyNodeStatus, true, true);
-    console.log("?????????????COMPARISON: "+fitness + " VS "+bestNodeValue);
+    var fitness = this.greedyFitnessChange(i, friendlyNodeStatus, tokenInfluences, true, true); //penultimate is 'isAdd', 2nd is recursive
+    console.log(i+"="+fitness);
+
     if (fitness > bestNodeValue){
-      console.log(i + " IS BETTER THAN " +bestNodesID);
       bestNodesID = [i];
       bestNodeValue = fitness;
     }
     else if (fitness == bestNodeValue){
       bestNodesID.push(i);
     }
+    if (findWorst){
+      if (fitness < worstTokenValue){
+        worstTokensID = [i];
+        worstTokenValue = fitness;
+      }
+      else if (fitness == worstTokenValue){
+        worstTokensID.push(i);
+      }
+    }
   }
   console.log("Best IDs + val:");
   console.log(bestNodesID);
   console.log(bestNodeValue);
+
   //picks a random node from those with equal fitness
-  var index = Math.floor(Math.random() * bestNodesID.length);
-  return bestNodesID[index];
+  var index = bestNodesID[Math.floor(Math.random() * bestNodesID.length)];
+  this.prevAiMoves.push(index);
+  this.prevAiMoves.forEach(function(peep){
+    aiMoves.push(peep); //TODO: move this to the main AI move function, no need to repeat code for each strategy.
+  });
+  console.log(aiMoves);
+
+  if(findWorst){
+    console.log("Worst token + val:");
+    console.log(worstTokensID);
+    console.log(worstTokenValue);
+    var index = worstTokensID[Math.floor(Math.random() * worstTokensID.length)]; //Selects all equally-bad nodes at random
+    for(var x=0; x<this.prevAiMoves.length; x++){
+      if (prevAiMoves[x] == index){
+        this.prevAiMoves.splice(x,1);
+        return;
+      }
+    }
+    console.log("ERROR GREEDY #4");
+  }
 
 }
 
-//Returns an array that gives the % increase for each node, given one additional token.
-GameState.prototype.createTokenImpactList = function(){
+//Returns two arrays containing the friendly and enemy influences for each node.
+GameState.prototype.createTokenInfluencesList = function(){
   var infectedStates = []; //Will contain 0 for uninfected, 1 for infected (colour doesn't matter)
-  var tokenImpact = []; //Final % change for the node
+  var friendlySources = []; //Final % change for the node
   var enemySources = []; //Checks if there are enemy sources. If entirely friendly sources, adding will not change %, so has value 0.
 
   //Initialises some useful variables
   this.formattedPeeps.forEach(function (peep, index){
     //-1 is the value for neutral, so 1 or 0 is infected by either player.
     infectedStates.push(peep[2]);
-    tokenImpact.push(0); //adds a value for each node for use later. impact% is 1/(infected neighbours + tokens + 1)
+    friendlySources.push(0); //adds a value for each node for use later. impact% is 1/(infected neighbours + tokens + 1)
     enemySources.push(0);
   });
 
   //Accounts for neighbour influences
   this.formattedConnections.forEach(function(connection){
-    if(infectedStates[connection[0]] >= 0){ //i.e. is 0 or 1, infected by either player.
-      tokenImpact[connection[1]]++; //Adds the infected neighbour to this node's number of infected sources.
-      enemySources[connection[1]]+= infectedStates[connection[0]]; //TEST: Should ONLY ever increment. 1 for each enemy source.
+    if(infectedStates[connection[0]] == 0){ //i.e. is 0 or 1, infected by either player.
+      friendlySources[connection[1]]++; //Adds the infected neighbour to this node's number of infected sources.
     }
-    if(infectedStates[connection[1]] >= 0){
-      tokenImpact[connection[0]]++; //Does the same for the other node in the pair.
-      enemySources[connection[0]]+= infectedStates[connection[1]];
+    else if(infectedStates[connection[0]] == 1){
+      enemySources[connection[1]]++;
+    }
+    if(infectedStates[connection[1]] == 0){ //i.e. is 0 or 1, infected by either player.
+      friendlySources[connection[0]]++; //Adds the infected neighbour to this node's number of infected sources.
+    }
+    else if(infectedStates[connection[1]] == 1){
+      enemySources[connection[0]]++;
     }
   });
 
   //Accounts for both players' tokens
   for(var i=0; i < this.prevAiMoves.length; i++){
     var token = this.prevAiMoves[i];
-    tokenImpact[token]++;
-    enemySources[token]++;
+    friendlySources[token]++;
     var playerToken = this.playerOneMoves[i];
-    tokenImpact[playerToken]++;
-    enemySources[token]++;
+    enemySources[playerToken]++;
   }
 
-  for (var i=0; i<tokenImpact.length; i++){
-    if (tokenImpact[i] > 0 && enemySources[i] == 0){ //Node has influences, but all are friendly, so adding more gets 0% increase.
-      tokenImpact[i] = 0;
-    }
-    else{
-      tokenImpact[i] = (1 / (1 + tokenImpact[i])); //% increase is 1  (1 + all tokens + all infected connections) E.g. a 0% node with 2 enemy influences becomes 33%. A 0% node with non becomes 100%.
-    }
-  }
-
-  return tokenImpact;
+  return [friendlySources, enemySources];
 }
 
-returns the id of the node whose token/s have the worst fitness, using a greedy strategy
-GameState.prototype.worstTokenGreedy = function(aiMoves, tokensArray, friendlyNodeStatus){
-  var worstTokensID = [];
-  var worstTokenValue = 100;
-  console.log("worsttokengreedy");
-
-  aiMoves.forEach(function(token){
-    var fitness = this.greedyFitnessChange(token, tokensArray, friendlyNodeStatus, false, true);
-    console.log(token+"="+fitness);
-
-    if (fitness < worstTokenValue){
-      worstTokensID = [token];
-      worstTokenValue = fitness;
-    }
-    else if (fitness == worstTokenValue){
-      worstTokensID.push(token);
-    }
-  },this);
-  console.log("Worst token + val:");
-  console.log(worstTokensID);
-  console.log(worstTokenValue);
-  var index = Math.floor(Math.random() * worstTokensID.length); //Selects all equally-bad nodes at random
-  return worstTokensID[index];
-}
-
-GameState.prototype.greedyFitnessChange = function(nodeID, tokensArray, friendlyNodeStatus, isAdd, recursive){
-  var friendlyInfluences = 0;
-  var enemyInfluences = 0;
-  var friendlyTokens = tokensArray[0];
-  var enemyTokens = tokensArray[1];
-
-  //increments number of friendly influences from tokens
-  friendlyTokens.forEach(function (token){
-    if (token == nodeID){
-      friendlyInfluences++;
-    }
-  });
-
-  //increments number of enemy influences from tokens
-  enemyTokens.forEach(function (token){
-    if (token == nodeID){
-      enemyInfluences++;
-    }
-  });
-
-  var connectedNodes = [];
-
-  //increments influences from neighbours
-  this.formattedConnections.forEach(function (connection){
-    if (connection[0] == nodeID){
-      connectedNodes.push(connection[1]);
-
-      //connection[n][2] retrieves the infected status.
-      if(this.formattedPeeps[connection[1]][2] == friendlyNodeStatus){
-        friendlyInfluences++;
-      }
-      //cannot use ternary here, as -1 represents neutral, which we want to ignore.
-      else if(this.formattedPeeps[connection[1]][2] == (1 - friendlyNodeStatus)){
-        enemyInfluences++;
-      }
-    }
-    else if (connection[1] == nodeID){
-      connectedNodes.push(connection[0]);
-
-      if(this.formattedPeeps[connection[0]][2] == friendlyNodeStatus){
-        friendlyInfluences++;
-      }
-      else if(this.formattedPeeps[connection[0]][2] == (1 - friendlyNodeStatus)){
-        enemyInfluences++;
-      }
-
-    }
-  },this);
-  //console.log("PARTWAY CHECK: " +friendlyInfluences + " " + enemyInfluences);
-  console.log("NODE: "+ nodeID + recursive + " " + friendlyInfluences + " " + enemyInfluences);
-
-  //represent fitness before adding/removing token
+GameState.prototype.greedyFitnessChange = function(nodeID, friendlyNodeStatus, tokenInfluences, isAdd, recursive){
   var fitness = 0;
-  //prevent divide by 0
-  if(friendlyInfluences == 0 && enemyInfluences == 0){
-    fitness = 0;
+
+  // for (var i=0; i<tokenInfluences.length; i++){
+  //   if (tokenInfluences[i] > 0 && enemySources[i] == 0){ //Node has influences, but all are friendly, so adding more gets 0% increase.
+  //     tokenInfluences[i] = 0;
+  //   }
+  //   else{
+  //     tokenInfluences[i] = (1 / (1 + tokenInfluences[i])); //% increase is 1  (1 + all tokens + all infected connections) E.g. a 0% node with 2 enemy influences becomes 33%. A 0% node with non becomes 100%.
+  //   }
+  // }
+
+  if (isAdd){
+
   }
 
   else{
-    fitness = friendlyInfluences / friendlyInfluences + enemyInfluences; //TODO: consider secondary own function. bc not 'adding' if we're treating conn as friendly.
+
   }
 
   //Fitness AFTER adding or removing a token
@@ -219,6 +176,8 @@ GameState.prototype.greedyFitnessChange = function(nodeID, tokensArray, friendly
     console.log("SECONDARY:" +secondaryFitness);
     fitnessChange = fitnessChange + (fitnessChange * secondaryFitness) + (1 - fitnessChange * (fitnessChange));
     console.log("FINALCHANGE: "+fitnessChange);
+
+    //TODO: If enemy influence becomes positive!
   }
 
   else{
