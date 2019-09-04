@@ -42,7 +42,8 @@ GameState.prototype.greedyNodeSelection = function(friendlyNodeStatus, tokenInfl
     else if (fitness == bestNodeValue){
       bestNodesID.push(i);
     }
-    if (findWorst){
+    if (findWorst && this.prevAiMoves.includes(i)){ //If we're looking for the worst token & the node inspected has a token.
+      fitness = this.greedyFitnessChange(i, friendlyNodeStatus, tokenInfluences, false, true); //false to show we are removing a token
       if (fitness < worstTokenValue){
         worstTokensID = [i];
         worstTokenValue = fitness;
@@ -60,7 +61,7 @@ GameState.prototype.greedyNodeSelection = function(friendlyNodeStatus, tokenInfl
   var index = bestNodesID[Math.floor(Math.random() * bestNodesID.length)];
   this.prevAiMoves.push(index);
   this.prevAiMoves.forEach(function(peep){
-    aiMoves.push(peep); //TODO: move this to the main AI move function, no need to repeat code for each strategy.
+    aiMoves.push(peep);
   });
   console.log(aiMoves);
 
@@ -68,14 +69,9 @@ GameState.prototype.greedyNodeSelection = function(friendlyNodeStatus, tokenInfl
     console.log("Worst token + val:");
     console.log(worstTokensID);
     console.log(worstTokenValue);
-    var index = worstTokensID[Math.floor(Math.random() * worstTokensID.length)]; //Selects all equally-bad nodes at random
-    for(var x=0; x<this.prevAiMoves.length; x++){
-      if (prevAiMoves[x] == index){
-        this.prevAiMoves.splice(x,1);
-        return;
-      }
-    }
-    console.log("ERROR GREEDY #4");
+    var worstToken = worstTokensID[Math.floor(Math.random() * worstTokensID.length)]; //Selects all equally-bad nodes at random
+    var index = this.prevAiMoves.indexOf(worstToken);
+    this.prevAiMoves.splice(index,1);
   }
 
 }
@@ -177,7 +173,6 @@ GameState.prototype.greedyFitnessChange = function(nodeID, friendlyNodeStatus, t
     fitnessChange = fitnessChange + (fitnessChange * secondaryFitness) + (1 - fitnessChange * (fitnessChange));
     console.log("FINALCHANGE: "+fitnessChange);
 
-    //TODO: If enemy influence becomes positive!
   }
 
   else{
@@ -185,34 +180,4 @@ GameState.prototype.greedyFitnessChange = function(nodeID, friendlyNodeStatus, t
   }
 
   return fitnessChange;
-}
-
-//TODO: remove & rework into GFC
-//function that captures edge cases where the chance of infection is 100% for the AI, therefore no token should be used
-//If not, allows us to use the computationally cheap peepDegrees variable
-GameState.prototype.tokenHasImpact = function(nodeID, tokensArray, friendlyNodeStatus){
-  if (tokensArray.indexOf(nodeID) != -1){
-  //The enemy has a token on this node, therefore we can increase chance of success
-    return true;
-  }
-  this.formattedConnections.forEach(function (connection){
-    console.log(connection);
-    console.log(nodeID);
-    if (connection[0] == nodeID){
-      console.log("------------------------");
-
-      if(this.formattedPeeps[connection[1]][2] != friendlyNodeStatus){
-        //the node is connected to an enemy node, therefore we can increase the chance of success
-        return true;
-      }
-    }
-    else if (connection[1] == nodeID){
-      console.log("------------------------");
-      if(this.formattedPeeps[connection[0]][2] != friendlyNodeStatus){
-        return true;
-      }
-    }
-  },this);
-  //This node already has 100% chance to be infected. A token is not needed here.
-  return false;
 }

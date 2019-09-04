@@ -621,7 +621,7 @@ class GameState {
     switch(Server.AiStrategy){
       case "SimpleGreedy":
         var aiTurnSimpleGreedy = require('./MyopicGreedy.js');
-        aiTurnSimpleGreedy(aiMoves);
+        aiTurnSimpleGreedy(aiMoves, false); //don't need to remove worst token, so just false
         break;
       case "Equilibrium":
         this.aiTurnEquilibrium(aiMoves, oneNodeOnly);
