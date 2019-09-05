@@ -14,7 +14,7 @@ const fs = require('fs');
 processConfig = async(rawPeeps, rawConnections, uniqueLayoutName, list, topologyIndex) =>{
 	//validate input configs
 	if (rawPeeps.length % 2 !== 0){
-		console.log("ERR! Must be even number of peeps!");
+		//console.log("ERR! Must be even number of peeps!");
 		return;
 	}
 
@@ -26,7 +26,7 @@ processConfig = async(rawPeeps, rawConnections, uniqueLayoutName, list, topology
 		}
 	}
 	else{
-		console.log("NOT NEUTRAL");
+		//console.log("NOT NEUTRAL");
 		for (var x=0; x<rawPeeps.length/2; x++){
 			randomInfection.push(0);
 			randomInfection.push(1);
@@ -64,7 +64,7 @@ async function loadConfigs() {
 		sliceAmount = 29; //removes this prefix when saving unique ID
 	}
 	else{ //depending where it's started from, can be already inside ContagionServer
-	console.log("Running on Local Mode.");
+	//console.log("Running on Local Mode.");
 		csvPeepsDirectory='Config_Files/';
 		sliceAmount = 13;
 	}
@@ -99,7 +99,7 @@ async function loadConfigs() {
 			var uniqueLayoutName = topologies[i].slice(sliceAmount,-1)+"_"+j;
 
 			var rawPeeps = null;
-			//console.log(positionsPath);
+			////console.log(positionsPath);
 			await csv({noheader:true, output:"csv"}).fromFile(positionsPath).then((jsonObj) =>{
 				rawPeeps = jsonObj;
 			});
@@ -113,7 +113,7 @@ async function loadConfigs() {
 
 	shuffle(NETWORK_CONFIGS); //random order of topologies
 	Server.initialiseTopologyLayoutIndexes();// initialises Server.CurrentTopologyLayoutIndexes and Server.CurrentTopologyIndices
-	//console.log(NETWORK_CONFIGS);
+	////console.log(NETWORK_CONFIGS);
 	console.log("ready");
 }
 
@@ -128,7 +128,7 @@ function createLaplacian(connections){
 		laplacian.push(arr);
 	}
 
-	//console.log(connections);
+	////console.log(connections);
 	for (var i=0; i < connections.length; i++){
 
 		var node1 = connections[i][0];
@@ -141,9 +141,9 @@ function createLaplacian(connections){
 		laplacian[node2][node1]--; //subtracts the adjacency matrix
 
 	}
-	console.log("-----------------------------");
-	console.log(connections);
-	console.log(laplacian);
+	//console.log("-----------------------------");
+	//console.log(connections);
+	//console.log(laplacian);
 
 	return laplacian;
 }
@@ -180,9 +180,9 @@ function shuffle(a) {
 // 			}
 // 			formattedArray.push(arr);
 // 		}
-// 		console.log(formattedArray);
-// 		console.log(innerArray);
-// 		console.log(innerArray.length);
+// 		//console.log(formattedArray);
+// 		//console.log(innerArray);
+// 		//console.log(innerArray.length);
 // 	};
 // }
 

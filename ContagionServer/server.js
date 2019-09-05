@@ -42,7 +42,7 @@ var express = require("express");
 var nodemailer = require('nodemailer');
 var extMath = require('./math.min');
 var app = express();
-var PORT = process.env.PORT || 5000;
+var PORT = process.env.PORT || 5001;
 //app.use(express.static(__dirname + "/"));
 
 //Setup mailing to alert if there is a problem with the database
@@ -165,7 +165,7 @@ function Server(){
   Server.RoundLimit = 10;
   Server.AiMode = true;
   Server.InfectionMode = "wowee"; //"majority" or anything else
-  Server.AiStrategy = "DegreeSensitiveHigh";//"Equilibrium";//"Predetermined";//"SimpleGreedy";
+  Server.AiStrategy = "SimpleGreedy";//"DegreeSensitiveHigh";//"Equilibrium";//"Predetermined";//"SimpleGreedy";
   Server.TokenProtocol = "Incremental"; //"AtStart" or "Incremental"
   Server.AiWaiting = false;
   Server.lastAlertTime = 0;
@@ -621,7 +621,8 @@ class GameState {
     switch(Server.AiStrategy){
       case "SimpleGreedy":
         var aiTurnSimpleGreedy = require('./MyopicGreedy.js');
-        aiTurnSimpleGreedy(aiMoves, false); //don't need to remove worst token, so just false
+        var ctx = this;
+        aiTurnSimpleGreedy(aiMoves, false, ctx); //don't need to remove worst token, so just false
         break;
       case "Equilibrium":
         this.aiTurnEquilibrium(aiMoves, oneNodeOnly);
