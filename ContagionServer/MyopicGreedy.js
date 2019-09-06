@@ -1,38 +1,31 @@
 //Greedy strategy, i.e. maximising expected increase in opinions spread for the next turn
 var ctx;
-
 function aiTurnSimpleGreedy(aiMoves, removeOld, context){
-
+  ctx = context;
   //We know at the point one player is AI, this retrieves their previous moves.
   //array of [AI(friendly from this POV), Player(enemy)] moves
-  ctx = context;
-  console.log("SimpleGreedy: "+aiMoves);
   friendlyNodeStatus = 0;
-  console.log("Prevmovecheck for greedy onetoken");
-  console.log(ctx.prevAiMoves);
 
   var tokenInfluences = createTokenInfluencesList();
 
   if(removeOld){
-    greedyNodeSelection(friendlyNodeStatus, tokenInfluences, true); //true to remove worst
+    greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, true); //true to remove worst
   }
   else{
-    greedyNodeSelection(friendlyNodeStatus, tokenInfluences, false); //false to just add best
+    greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, false); //false to just add best
   }
   console.log("DONE");
 }
 
 //returns the id of the best node by fitness, using a greedy strategy
-function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, findWorst){
+function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findWorst){
   var bestNodesID = [-1];
   var bestNodeValue = -1;
 
   if (findWorst){
     var worstTokensID = [-1];
     var worstTokenValue = 100;
-    console.log("worsttokengreedy");
   }
-  console.log("bestgreedy");
   for(i=0; i<ctx.formattedPeeps.length; i++){
     var fitness = greedyFitnessChange(i, friendlyNodeStatus, tokenInfluences, true, true, false); //3rd last is 'isAdd', 2nd is recursive, last is a modifier for primary node changing from enemy to friendly (not needed here)
     console.log(i+"="+fitness);
@@ -65,7 +58,6 @@ function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, findWorst){
   ctx.prevAiMoves.forEach(function(peep){
     aiMoves.push(peep);
   });
-  console.log(aiMoves);
 
   if(findWorst){
     console.log("Worst token + val:");
@@ -147,7 +139,10 @@ function greedyFitnessChange(nodeID, friendlyNodeStatus, tokenInfluences, isAdd,
 
 function fitnessChangeCalculation(nodeID, isAdd, tokenInfluences, primaryFlipped){
   var modifier = (primaryFlipped ? 1 : 0);
-  var initialFitness = tokenInfluences[0][nodeID] / (tokenInfluences[0][nodeID] + tokenInfluences[1][nodeID]);
+  var initialFitness = (tokenInfluences[0][nodeID]) / (tokenInfluences[0][nodeID] + tokenInfluences[1][nodeID]);
+  if(isNaN(initialFitness)){
+    initialFitness = 0;
+  }
   var finalFitness;
   if (isAdd){
     finalFitness = (tokenInfluences[0][nodeID] + 1) / (tokenInfluences[0][nodeID] + tokenInfluences[1][nodeID] + 1 - modifier);
@@ -160,7 +155,7 @@ function fitnessChangeCalculation(nodeID, isAdd, tokenInfluences, primaryFlipped
       finalFitness = tokenInfluences[0][nodeID] - 1 / (tokenInfluences[0][nodeID] + tokenInfluences[1][nodeID] - 1 - modifier);
     }
   }
-  console.log("F"+finalFitness+"_"+initialFitness);
+  //console.log("F"+finalFitness+"_"+initialFitness);
   return finalFitness - initialFitness;
 }
 

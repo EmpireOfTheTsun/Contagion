@@ -52,7 +52,7 @@ function Simulations(){
 	Simulations.ScoreLists = [];
 
 	if (Simulations.LocalMode){
-		Simulations.ServerLocation = "ws://127.0.0.1:5000";
+		Simulations.ServerLocation = "ws://127.0.0.1:5001";
 	}
 	else{
 		Simulations.ServerLocation = "wss://stark-atoll-77422.herokuapp.com/";
