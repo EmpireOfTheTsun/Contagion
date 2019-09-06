@@ -157,7 +157,6 @@ Server.initialiseTopologyLayoutIndexes = function(){
   Server.CurrentTopologyIndex = 0;
 }
 
-//BUG: No connection ended on refresh
 function Server(){
   Server.MAX_TOKENS = 5;
   Server.CurrentGames = [];
@@ -176,10 +175,6 @@ function Server(){
 
 Server();
 
-
-
-
-//TODO: Make sure players repeating a game get tracked! I am 99% this is fine, but will need to check
 class GameState {
   constructor(peeps, connections, playerOneLayoutID, playerTwoLayoutID, laplacianID, ws) {
     this.gameID = uuidv4();

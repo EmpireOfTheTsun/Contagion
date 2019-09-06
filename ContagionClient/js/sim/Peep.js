@@ -333,7 +333,12 @@ function Peep(config){
 
 				// %, centered
 				ctx.textAlign = "center";
-				var labelPercent = Math.round(100*(self.numInfectedFriends/self.numFriends)) + "%";
+				if (Simulations.DebugMode){
+					var labelPercent = Math.round(100*(self.numInfectedFriends/self.numFriends)) + "% "+this.id;
+				}
+				else{
+					var labelPercent = Math.round(100*(self.numInfectedFriends/self.numFriends)) + "%";
+				}
 				ctx.fillText(labelPercent, 0, 0);
 
 				/*
@@ -352,7 +357,12 @@ function Peep(config){
 
 			}else{
 				ctx.textAlign = "center";
-				ctx.fillText("∅", 0, -1);
+				if(Simulations.DebugMode){
+					ctx.fillText("∅ "+this.id, 0, -1);
+				}
+				else{
+					ctx.fillText("∅", 0, -1);
+				}
 				ctx.fillStyle = "#ddd";
 			}
 
