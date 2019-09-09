@@ -1229,6 +1229,7 @@ Server.ParseMessage = function(message, ws){
       //Server.AiMode = false;
       console.log("MSGCHECK");
       console.log(message);
+      console.log(message.payload);
       console.log(message.payload.length);
       if(message.payload.length > 0){
         Server.newGame(message.payload, ws);
