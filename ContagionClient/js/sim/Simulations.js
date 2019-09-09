@@ -6,8 +6,8 @@ I have made an attempt to refactor things into the overall Simulations class, bu
 
 //SIM DELARED AT 167
 function Simulations(){
-	Simulations.LocalMode = true;
-	Simulations.DebugMode = true;
+	Simulations.LocalMode = false;
+	Simulations.DebugMode = false;
 	Simulations.Username = "";
 
 	function cookieManager() {
@@ -15,15 +15,16 @@ function Simulations(){
 			console.log("no cookie found. Setting now.");
 			var required = 1;//Math.floor(100000000 * Math.random());
 			var user = "";
-			while (user != required){
-		    user = prompt("Your random ID is: "+required+". Please write it on your questionnaire and enter it below.", "");
-		  }
+			//while (user != required){
+		    user = 1; //prompt("Your random ID is: "+required+". Please write it on your questionnaire and enter it below.", "");
+		  	//}
 
 			document.cookie = user;
 			Simulations.Username = user;
 
 		}
 		else{
+			console.log("Reading from cookie");
 			Simulations.Username = document.cookie;
 		}
 		console.log(Simulations.Username);
