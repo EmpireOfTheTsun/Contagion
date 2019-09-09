@@ -15,7 +15,7 @@ function aiTurnSimpleGreedy(aiMoves, removeOld, context){
     greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, false); //false to just add best
   }
   console.log("DONE");
-}
+} 
 
 //returns the id of the best node by fitness, using a greedy strategy
 function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findWorst){

@@ -1,5 +1,5 @@
 //TODO: UPDATE DATABASE WITH LONGER NODES FLIPPED LENGTH
-Server.LocalMode = true;
+Server.LocalMode = false;
 Server.NeutralMode = true;
 Server.TrialMode = false;
 Server.NumberOfNodes = 20; //Changing this may require some refactoring...
@@ -1223,6 +1223,7 @@ Server.ParseMessage = function(message, ws){
       //Server.AiMode = false;
       console.log("MSGCHECK");
       console.log(message);
+      console.log(message.payload.length);
       if(message.payload.length > 0){
         Server.newGame(message.payload, ws);
       }
