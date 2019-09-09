@@ -474,6 +474,12 @@ class GameState {
     });
     var p1additionalScore = playerOnePeepsCount * 10;
     var p2additionalScore = playerTwoPeepsCount * 10;
+
+    if(this.roundNumber == 10){
+      p1additionalScore = p1additionalScore * 5;
+      p2additionalScore = p2additionalScore * 5;
+    }
+
     this.playerOneScore += p1additionalScore;
     this.playerOneScoreList.push(this.playerOneScore);
     this.playerTwoScore += p2additionalScore;
