@@ -1220,14 +1220,16 @@ Server.ParseMessage = function(message, ws){
       Server.submitMoves(message.payload, ws);
       break;
     case "NEW_GAME_TOKEN":
-      //Server.AiMode = false;
+      //Server.AiMode = fals;
       console.log("MSGCHECK");
       console.log(message);
       console.log(message.payload.length);
       if(message.payload.length > 0){
-        Server.newGame(message.payload, ws);
+        Server.newGame(Math.random()*10000, ws);
       }
-      else{ console.log("Somebody's fucked it!");}
+      else{ console.log("Somebody's fucked it!");
+          Server.newGame(Math.random()*10000, ws); //TODO FIND WHY THIS FAILED
+          }
       break;
     case "EMERGENCY_AI":
       Server.AiMode = true;
