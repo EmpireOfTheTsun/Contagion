@@ -1,24 +1,31 @@
 //Greedy strategy, i.e. maximising expected increase in opinions spread for the next turn
 var ctx;
-function aiTurnSimpleGreedy(aiMoves, removeOld, context){
+function aiTurnSimpleGreedy(aiMoves, removeOld, context, friendlyNodeStatus){
   ctx = context;
-  //We know at the point one player is AI, this retrieves their previous moves.
-  //array of [AI(friendly from this POV), Player(enemy)] moves
-  friendlyNodeStatus = 0;
-
-  var tokenInfluences = createTokenInfluencesList();
-
-  if(removeOld){
-    greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, true); //true to remove worst
+  if(friendlyNodeStatus == 0){
+    var myMoves = ctx.prevAiMoves;
+    var enemyMoves = ctx.playerOneMoves;
   }
   else{
-    greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, false); //false to just add best
+    var myMoves = ctx.playerOneMoves;
+    var enemyMoves = ctx.prevAiMoves;
+  }
+  //We know at the point one player is AI, this retrieves their previous moves.
+  //array of [AI(friendly from this POV), Player(enemy)] moves
+
+  var tokenInfluences = createTokenInfluencesList(friendlyNodeStatus, myMoves, enemyMoves);
+
+  if(removeOld){
+    greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, true, myMoves); //true to remove worst
+  }
+  else{
+    greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, false, myMoves); //false to just add best
   }
   console.log("DONE");
 } 
 
 //returns the id of the best node by fitness, using a greedy strategy
-function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findWorst){
+function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findWorst, myMoves){
   var bestNodesID = [-1];
   var bestNodeValue = -1;
 
@@ -36,8 +43,8 @@ function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findW
     }
     else if (fitness == bestNodeValue){
       bestNodesID.push(i);
-    }
-    if (findWorst && ctx.prevAiMoves.includes(i)){ //If we're looking for the worst token & the node inspected has a token.
+    } //TODO: I should test some of this for the fake AI player!
+    if (findWorst && myMoves.includes(i)){ //If we're looking for the worst token & the node inspected has a token.
       fitness = greedyFitnessChange(i, friendlyNodeStatus, tokenInfluences, false, true, false); //false to show we are removing a token
       if (fitness < worstTokenValue){
         worstTokensID = [i];
@@ -54,24 +61,35 @@ function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findW
 
   //picks a random node from those with equal fitness
   var index = bestNodesID[Math.floor(Math.random() * bestNodesID.length)];
-  ctx.prevAiMoves.push(index);
-  ctx.prevAiMoves.forEach(function(peep){
-    aiMoves.push(peep);
-  });
+
+  if(friendlyNodeStatus == 0){
+    ctx.prevAiMoves.push(index);
+    ctx.prevAiMoves.forEach(function(peep){
+      aiMoves.push(peep);
+    });
+  }
+  else{
+    aiMoves.push(index);
+  }
 
   if(findWorst){
-    console.log("Worst token + val:");
-    console.log(worstTokensID);
-    console.log(worstTokenValue);
     var worstToken = worstTokensID[Math.floor(Math.random() * worstTokensID.length)]; //Selects all equally-bad nodes at random
-    var index = ctx.prevAiMoves.indexOf(worstToken);
-    ctx.prevAiMoves.splice(index,1);
+
+    if(friendlyNodeStatus == 0){
+      var index = ctx.prevAiMoves.indexOf(worstToken);
+      ctx.prevAiMoves.splice(index,1);
+    }
+    else{
+      var index = aiMoves.indexOf(worstToken);
+      aiMoves.splice(index,1);
+    }
   }
 
 }
 
 //Returns two arrays containing the friendly and enemy influences for each node.
-function createTokenInfluencesList(){
+function createTokenInfluencesList(friendlyNodeStatus, myMoves, enemyMoves){
+  var enemyNodeStatus = 1 - friendlyNodeStatus; //0 if 1, 1 if 0.
   var infectedStates = []; //Will contain 0 for uninfected, 1 for infected (colour doesn't matter)
   var friendlySources = []; //Final % change for the node
   var enemySources = []; //Checks if there are enemy sources. If entirely friendly sources, adding will not change %, so has value 0.
@@ -86,26 +104,26 @@ function createTokenInfluencesList(){
 
   //Accounts for neighbour influences
   ctx.formattedConnections.forEach(function(connection){
-    if(infectedStates[connection[0]] == 0){ //i.e. is 0 or 1, infected by either player.
+    if(infectedStates[connection[0]] == friendlyNodeStatus){ //i.e. is 0 or 1, infected by either player.
       friendlySources[connection[1]]++; //Adds the infected neighbour to this node's number of infected sources.
     }
-    else if(infectedStates[connection[0]] == 1){
+    else if(infectedStates[connection[0]] == enemyNodeStatus){
       enemySources[connection[1]]++;
     }
-    if(infectedStates[connection[1]] == 0){ //i.e. is 0 or 1, infected by either player.
+    if(infectedStates[connection[1]] == friendlyNodeStatus){ //i.e. is 0 or 1, infected by either player.
       friendlySources[connection[0]]++; //Adds the infected neighbour to this node's number of infected sources.
     }
-    else if(infectedStates[connection[1]] == 1){
+    else if(infectedStates[connection[1]] == enemyNodeStatus){
       enemySources[connection[0]]++;
     }
   });
 
   //Accounts for both players' tokens
-  for(var i=0; i < ctx.prevAiMoves.length; i++){
-    var token = ctx.prevAiMoves[i];
+  for(var i=0; i < myMoves.length; i++){
+    var token = myMoves[i];
+    var enemyToken = enemyMoves[i];
     friendlySources[token]++;
-    var playerToken = ctx.playerOneMoves[i];
-    enemySources[playerToken]++;
+    enemySources[enemyToken]++;
   }
 
   return [friendlySources, enemySources];

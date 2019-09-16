@@ -185,9 +185,7 @@ function shuffle(a) {
 // 		//console.log(innerArray.length);
 // 	};
 // }
-
 loadConfigs();
-
 
 module.exports.configs = NETWORK_CONFIGS;
 module.exports.laplacians = NETWORK_LAPLACIANS;
