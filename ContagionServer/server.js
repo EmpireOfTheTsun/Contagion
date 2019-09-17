@@ -1,14 +1,15 @@
 //TODO: UPDATE DATABASE WITH LONGER NODES FLIPPED LENGTH
-Server.LocalMode = false;
-Server.NeutralMode = true;
-Server.TrialMode = false;
+Server.LocalMode = true; //Run on local machine or internet-facing
+Server.NeutralMode = true; //Supports neutral nodes (this is the default now)
+Server.TrialMode = false; //Running controlled trials with people
+Server.ExperimentMode = true; //For things like monte carlo...
 Server.NumberOfNodes = 20; //Changing this may require some refactoring...
 Server.TestMoves = [[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
 [ 6, 5, 12, 5, 2, 17, 7, 18, 9, 9 ],
 [ 7, 12, 9, 13, 13, 1, 4, 19, 10, 19 ]];
 Server.playerTopologies = [];
-Server.ExponentStrength = 0.25; //Higher = more bias to high/low degree nodes in their respective strategies
-Server.ExistingTokensBias = -1; //Increases likelihood of placing tokens on nodes that already have tokens. Negative reduces the likelihood.
+Server.ExponentStrength = 0.35; //Higher = more bias to high/low degree nodes in their respective strategies
+Server.ExistingTokensBias = 0; //Increases likelihood of placing tokens on nodes that already have tokens. Negative reduces the likelihood.
 //Does not affect random, equilibrium or predetermined strategies.
 
 
@@ -81,11 +82,33 @@ module.exports = {
 };
 module.exports.NeutralMode = Server.NeutralMode;
 module.exports.LocalMode = Server.LocalMode;
-//module.exports.NumberOfNodes = Server.NumberOfNodes;
+configData = undefined;
 
 configData = require('./NetworkConfigurations.js');
 serverConfigs = configData.configs;
-laplaciansList = configData.laplacians; //TODO: INTEGRATE THIS
+laplaciansList = configData.laplacians;
+
+
+if(Server.ExperimentMode){
+  Server.LoadExperiment(0);
+}
+
+Server.LoadExperiment = function(times){
+  if(times > 100){
+    console.log("Error Initialising!");
+    return;
+  }
+  if(configData.laplacians.length != 0){
+    Server.BeginExperiment();
+  }
+  else{setTimeout(() => {this.LoadExperiment(times+1);}, 250);
+
+}
+
+Server.BeginExperiment = function(){
+
+}
+
 const Message = require('./Message.js');
 
 Server.sendSqlQuery = function(query, game){
@@ -340,7 +363,7 @@ class GameState {
       }
       else{
         var aiPlayer = this.playerTwoMoves; //WARN: Assumes P2 always AI.
-        this.aiTurn(aiPlayer);
+        this.aiTurn(aiPlayer, 0);
       }
     }
     //no AI players, so do nothing
@@ -611,7 +634,7 @@ class GameState {
 
   }
 
-  GameState.prototype.aiTurn = function(aiMoves){
+  GameState.prototype.aiTurn = function(aiMoves, friendlyNodeStatus){
     aiMoves = [];
     var oneNodeOnly = (this.prevAiMoves.length == 0) ? false : true; //for a previous version where there would be 5 tokens to start, then 1 token moved each time.
     if (Server.TrialMode){
@@ -626,7 +649,7 @@ class GameState {
         aiTurnSimpleGreedy(aiMoves, false, ctx); //don't need to remove worst token, so just false
         break;
       case "Equilibrium":
-        this.aiTurnEquilibrium(aiMoves, oneNodeOnly);
+        this.aiTurnEquilibrium(aiMoves, oneNodeOnly, friendlyNodeStatus);
         break;
       case "DegreeSensitiveLow":
         this.aiTurnDegreeSensitive(aiMoves, oneNodeOnly, true); //True for low degree preference
@@ -639,7 +662,9 @@ class GameState {
         break;
     }
     console.log("AIII:"+aiMoves);
-    this.playerTwoMoves = aiMoves;
+    if(friendlyNodeStatus == 0){
+      this.playerTwoMoves = aiMoves;
+    }
   }
 
   //random strategy
@@ -675,7 +700,7 @@ class GameState {
 
 
   //Strategy to maximise score at some time-insensitive equilibrium
-  GameState.prototype.aiTurnEquilibrium = function(aiMoves, oneNodeOnly){
+  GameState.prototype.aiTurnEquilibrium = function(aiMoves, oneNodeOnly, friendlyNodeStatus){
     //adds one token when the token protocol is incremental
     if (this.prevAiMoves.length == 0){
       this.aiTurnRandom(aiMoves, oneNodeOnly);
@@ -996,6 +1021,7 @@ Server.getConfig = function(twoPlayerMode, perm){
 wss.on('connection', ((ws) => {
   ws.id = uuidv4();
   console.log("new connection"+ws.id);
+  console.log(configData);
   ws.on('message', (message) => {
       Server.ParseMessage(message, ws);
   });
@@ -1226,15 +1252,17 @@ Server.ParseMessage = function(message, ws){
       Server.submitMoves(message.payload, ws);
       break;
     case "NEW_GAME_TOKEN":
-      //Server.AiMode = false;
+      //Server.AiMode = fals;
       console.log("MSGCHECK");
       console.log(message);
       console.log(message.payload);
       console.log(message.payload.length);
       if(message.payload.length > 0){
-        Server.newGame(message.payload, ws);
+        Server.newGame(Math.random()*10000, ws);
       }
-      else{ console.log("Somebody's fucked it!");}
+      else{ console.log("Somebody's fucked it!");
+          Server.newGame(Math.random()*10000, ws); //TODO FIND WHY THIS FAILED
+      }
       break;
     case "EMERGENCY_AI":
       Server.AiMode = true;

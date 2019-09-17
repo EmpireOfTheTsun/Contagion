@@ -6,7 +6,7 @@ I have made an attempt to refactor things into the overall Simulations class, bu
 
 //SIM DELARED AT 167
 function Simulations(){
-	Simulations.LocalMode = false;
+	Simulations.LocalMode = true;
 	Simulations.DebugMode = false;
 	Simulations.Username = "";
 
@@ -184,7 +184,6 @@ function Simulations(){
 	}
 
 	Simulations.getConfig = function(){
-		//TODO: Implement waiting!!! Here is a good place to do it. or where it's called from.
 		return Simulations.recievedConfig;
 	}
 
@@ -249,7 +248,6 @@ function Simulations(){
 		Simulations.ScoreLists = [];
 		Simulations.PERCENTAGE_INFECTED = 0;
 		Simulations.Chart = 0;
-		//publish("sim/round_over"); //TODO: i recently commented this out. may fix problems?
 		slideshow.gotoChapter("Strategy");
 	}
 
@@ -394,7 +392,7 @@ function Simulations(){
 			publish("sim/out_of_connections"); //slight misnomer, alerts the user that they have remaining connections they have to use
 			return false;
 		}
-		if (SimUI.RoundNumber != 1){ //TODO here is the config thing
+		if (SimUI.RoundNumber != 1){
 			var currMoves = self.sims[0].formatPeeps();
 			if (orbits){
 				var tempIndex = currMoves.indexOf(id);
@@ -422,8 +420,8 @@ function Simulations(){
 			}
 			else if (differences > 1){
 				Simulations.popupDialogue("You can only move one token per turn!");
-				publish("sim/out_of_connections"); //delet this
-				return false; //TODO REMOVE REPEAT CODE
+				publish("sim/out_of_connections");
+				return false;
 			}
 		}
 		return true;
@@ -432,7 +430,6 @@ function Simulations(){
 	Simulations.resetMoves = function(){
 		var game
 			self.peeps.forEach(function(peep){
-				//TODO: are the IDs the same on the server?
 				for(i=0; i<peep.playerOrbits.length; i++){
 					formattedPeeps.push(peep.id);
 				}
@@ -537,12 +534,10 @@ function Sim(config){
 	// Resize
 	var simOffset;
 
-	//TODO: Change 'aiorbits' when multiplayer properly implemented
 	//This returns the ID for each orbit. If node has 2 orbits, will appear twice, etc.
 	self.formatPeeps = function(){
 		var formattedPeeps = []
 		self.peeps.forEach(function(peep){
-			//TODO: are the IDs the same on the server?
 			for(i=0; i<peep.playerOrbits.length; i++){
 				formattedPeeps.push(peep.id);
 			}
