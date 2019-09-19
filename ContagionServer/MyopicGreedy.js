@@ -2,7 +2,7 @@
 var ctx;
 function aiTurnSimpleGreedy(aiMoves, removeOld, context, friendlyNodeStatus){
   ctx = context;
-  if(friendlyNodeStatus == 0){
+  if(ctx.isServerPlayer(friendlyNodeStatus)){
     var myMoves = ctx.prevAiMoves;
     var enemyMoves = ctx.playerOneMoves;
   }
@@ -62,7 +62,7 @@ function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findW
   //picks a random node from those with equal fitness
   var index = bestNodesID[Math.floor(Math.random() * bestNodesID.length)];
 
-  if(friendlyNodeStatus == 0){
+  if(ctx.isServerPlayer(friendlyNodeStatus)){
     ctx.prevAiMoves.push(index);
     ctx.prevAiMoves.forEach(function(peep){
       aiMoves.push(peep);
@@ -75,7 +75,7 @@ function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findW
   if(findWorst){
     var worstToken = worstTokensID[Math.floor(Math.random() * worstTokensID.length)]; //Selects all equally-bad nodes at random
 
-    if(friendlyNodeStatus == 0){
+    if(ctx.isServerPlayer(friendlyNodeStatus)){
       var index = ctx.prevAiMoves.indexOf(worstToken);
       ctx.prevAiMoves.splice(index,1);
     }

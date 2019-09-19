@@ -100,11 +100,12 @@ function Simulations(){
 					break;
 		}
 	}
+	
 	self.serverSetup = function(){
 		self.ws = new WebSocket(Simulations.ServerLocation);
 		self.ws.onopen = function (event) {
-		self.ws.send("Connection Recieved.");
-		setInterval(Simulations.heartbeat, 250);
+			self.ws.send("Connection Recieved.");
+			setInterval(Simulations.heartbeat, 250);
 		};
 		self.ws.onerror = function (err) {
 			console.log('err: ', err);
