@@ -107,7 +107,7 @@ if(Server.ExperimentMode){
 const Message = require('./Message.js');
 
 Server.sendSqlQuery = function(query, game){
-  console.log(query);
+  //console.log(query);
   if (!Server.LocalMode && !Server.ExperimentMode){
     try{
       client.query(query, function(err, result){
@@ -398,7 +398,6 @@ class GameState {
   GameState.prototype.removeGame = async(game) => {
     var index = Server.CurrentGames.indexOf(game);
     Server.CurrentGames.splice(index, 1);
-    console.log("SEE ME No. games:"+Server.CurrentGames.length);
   }
 
   //naturalEnd is true when the game ends by reaching the max number of rounds.
@@ -421,8 +420,6 @@ class GameState {
     }
     if (naturalEnd){
       //send score, etc.
-      console.log("P1SCORE: "+game.playerOneScore);
-      console.log("P2SCORE: "+game.playerTwoScore);
       if (game.playerTwo == "AI"){
         if (game.playerOneScore > game.playerTwoScore){
           Server.sendResults(1, game, "win");
@@ -634,7 +631,7 @@ class GameState {
       this.aiTurnPredetermined(aiMoves, oneNodeOnly);
       return;
     }
-    console.log("FFFF "+this.playerOneMoves);
+    //console.log("FFFF "+this.playerOneMoves);
     switch(strategy){
       case "SimpleGreedy":
         var aiTurnSimpleGreedy = require('./MyopicGreedy.js');
@@ -654,12 +651,12 @@ class GameState {
         this.aiTurnRandom(aiMoves, oneNodeOnly, friendlyNodeStatus);
         break;
     }
-    console.log("AIII:"+aiMoves);
+    //console.log("AIII:"+aiMoves);
     if(this.isServerPlayer(friendlyNodeStatus)){
       this.playerTwoMoves = aiMoves;
     }
     else{
-      return aiMoves;
+      return aiMoves[0];
     }
   }
 
@@ -686,7 +683,7 @@ class GameState {
         });
       }
       else{
-        aiMoves.push(move);
+        aiMoves.push(peepIndex);
       }
       return;
     }
@@ -721,13 +718,13 @@ class GameState {
   //Strategy to maximise score at some time-insensitive equilibrium
   GameState.prototype.aiTurnEquilibrium = function(aiMoves, oneNodeOnly, friendlyNodeStatus){
     //adds one token when the token protocol is incremental
-    if (this.prevAiMoves.length == 0){
+    if (this.roundNumber == 0){
       this.aiTurnRandom(aiMoves, oneNodeOnly, friendlyNodeStatus);
       return;
     }
-    console.log("PARAMETERCHECK");
-    console.log(this.prevAiMoves);
-    console.log(this.playerOneMoves);
+    // console.log("PARAMETERCHECK");
+    // console.log(this.prevAiMoves);
+    // console.log(this.playerOneMoves);
     if(Server.TokenProtocol == "Incremental"){
       var friendlyMoves;
       var enemyMoves; //TODO: Is this actually a vector?
@@ -749,8 +746,6 @@ class GameState {
       }
 
       var laplacian = clone(laplaciansList[this.laplacianID]);
-      console.log("L (without Pa/Pb):");
-      console.log(laplacian);
 
       for (var i=0; i < friendlyMoves.length; i++){
         laplacian[friendlyMoves[i]][friendlyMoves[i]]++; //adds p_b for the AI player's ith token
@@ -759,14 +754,11 @@ class GameState {
         enemyMovesVector[enemyMoves[i]]++;
         //This is required as friendlyMoves is length n-1, where n is the round number. We need length 20 for matrix.
       }
-      console.log("Pb");
-      console.log(enemyMovesVector);
 
       var maxScore = 0;
       var bestNode = -1;
 
       for (var i=0; i < Server.NumberOfNodes; i++){
-        console.log("NODE "+i);
         var probabilitiesVector = this.createProbabilitiesVector(laplacian, friendlyMovesVector, i, false);
         var selectionFitness = this.calculateFitness(probabilitiesVector);
         if (selectionFitness > maxScore){
@@ -774,7 +766,7 @@ class GameState {
           bestNode = i;
         }
       }
-      console.log("BEST IS "+bestNode);
+      //console.log("BEST IS "+bestNode);
       this.createProbabilitiesVector(laplacian, friendlyMovesVector, bestNode, true); //This outputs the best one's details. Can remove if needed!
       var peepIndex = bestNode;
 
@@ -800,14 +792,14 @@ class GameState {
 
     var invLaplacian = extMath.inv(laplacian);
     var probVector = extMath.multiply(friendlyMovesVector, invLaplacian);
-    if (isLogging == true){
-      console.log("Pa:");
-      console.log(friendlyMovesVector);
-      console.log("Ua:");
-      console.log(probVector);
-      console.log("Inverted Matrix:");
-      console.log(invLaplacian);
-    }
+    // if (isLogging == true){
+    //   console.log("Pa:");
+    //   console.log(friendlyMovesVector);
+    //   console.log("Ua:");
+    //   console.log(probVector);
+    //   console.log("Inverted Matrix:");
+    //   console.log(invLaplacian);
+    // }
 
     laplacian[i][i]--;
     friendlyMovesVector[i]--; //reverts the change to this var to avoid an expensive clone operation
@@ -860,7 +852,7 @@ class GameState {
           }
         }
         else{//This is the above but for when the experimental opposition AI is playing.
-          for(var i=0; i < this.playerOneMoves.length; i++){
+          for(var i=0; i < this.length; i++){
             var token = this.playerOneMoves[i];
             laplacian[token][token] += Server.ExistingTokensBias;
           }
@@ -870,11 +862,9 @@ class GameState {
         var nodeDegree = laplacian[i][i];
 
         if(lowDegreeSensitivity){
-          console.log("IS LOW SENSITIVE");
           var nodeWeight = extMath.exp(Server.ExponentStrength*nodeDegree*-1); //negative exponent weights high degree nodes lower
         }
         else{
-          //console.log("IS HIGH SENSITIVE");
           var nodeWeight = extMath.exp(Server.ExponentStrength*nodeDegree);
         }
         nodeWeights.push(nodeWeight);
@@ -921,9 +911,6 @@ class GameState {
   GameState.prototype.aiTurnPredetermined = function(aiMoves, oneNodeOnly){
     console.log("WARNING: NOT UPDATED FOR EXPERIMENTAL AI");
     var peepIndex = this.predeterminedAIMoves[this.roundNumber];
-    console.log(this.predeterminedAIMoves);
-    console.log(peepIndex);
-    console.log("---------CHECKMEPREDETERMINED-------------");
     this.prevAiMoves.push(peepIndex);
     this.prevAiMoves.forEach(function(move){
       aiMoves.push(move);
@@ -994,7 +981,6 @@ Server.submitMoves = function(message, ws){
   if (game == null){
     return;
   }
-  console.log("Test"+message.length+ " "+game.roundNumber+" "+Server.TokenProtocol);
   if(Server.TokenProtocol == "Incremental" && message.length != game.roundNumber+1){
     console.log("ERR ERR WRONG NO OF TOKENS!"+message.length+ " "+game.roundNumber);
   }
@@ -1012,7 +998,7 @@ Server.getConfig = function(twoPlayerMode, perm){
       var topologyID = Server.CurrentTopologyIndex;
       Server.CurrentTopologyIndex = (Server.CurrentTopologyIndex + 1) % serverConfigs.length;
     //P1 Topology
-    console.log("CHECK"+Server.CurrentTopologyLayoutIndexes);
+    //console.log("CHECK"+Server.CurrentTopologyLayoutIndexes);
     var layoutID = Server.CurrentTopologyLayoutIndexes[topologyID];
     Server.CurrentTopologyLayoutIndexes[topologyID] = (Server.CurrentTopologyLayoutIndexes[topologyID] + 1) % serverConfigs[topologyID].length;
     var p2LayoutID = Server.CurrentTopologyLayoutIndexes[topologyID];
@@ -1079,12 +1065,8 @@ Server.processUsername = function(username, ws){
     console.log("fuc3");
     username = uuidv4();
   }
-  console.log(Server.playerTopologies);
   var found = Server.playerTopologies.find(function(item){
-    console.log("ITEM");
-    console.log(item); //lol
     if (item[0] == username){
-      console.log("USER FOUND");
       ws.permutation = item[1];
       complete = true;
     }
@@ -1093,10 +1075,8 @@ Server.processUsername = function(username, ws){
     var perm = Server.generatePerm();
     ws.permutation = perm;
     Server.playerTopologies.push([username, perm]);
+    console.log(Server.playerTopologies);
   }
-  console.log("Player "+username+" Topology Order:");
-  console.log(ws.permutation);
-  console.log(Server.playerTopologies);
   // for (int i=0; i<Server.playerTopologies.length){
   //   if(Server.playerTopologies)
   // }
@@ -1105,7 +1085,7 @@ Server.processUsername = function(username, ws){
 }
 
 Server.newGame = function(username, ws){
-  console.log("Checking username "+username);
+  //console.log("Checking username "+username);
   if (username != null && username.length > 0){
     Server.processUsername(username, ws);
     ws.id = username; //just in case of collisions. Substring as database can only hold strings of certain length
@@ -1130,7 +1110,6 @@ Server.newGame = function(username, ws){
     return;
   }
   //If nobody's waiting for a player 2
-  console.log("WGC "+Server.WaitingGameConfig);
   if (Server.AiMode || Server.WaitingGameConfig == null){// || Server.CurrentGames.length == 0){ pretty sure commented out code is wrong! Will break when 2 human games occur
     if (!Server.AiMode){
       var config = Server.getConfig(true);
@@ -1155,9 +1134,7 @@ Server.newGame = function(username, ws){
     game.gameStartTime = Date.now();
     game.addGameToDatabase();
     config.maxConnections = (Server.TokenProtocol == "Incremental") ? 1 : Server.MAX_TOKENS;
-    console.log(config.maxConnections);
     config.gameID = game.gameID;
-    console.log(config.gameID);
     delete config.playerTwoNetwork;
     delete config.playerTwoLayoutID;
     delete config.playerOneLayoutID; //Don't want to give player any idea of if they're player 1 or 2
@@ -1264,11 +1241,9 @@ Server.registerClick = function(payload, ws){
 //ws allows us to return a message to the client
 Server.ParseMessage = function(message, ws){
   try{
-
     message = JSON.parse(message);
   }
   catch(err){
-    //console.log(err);
     return;
   }
   switch(message.status){
@@ -1277,8 +1252,6 @@ Server.ParseMessage = function(message, ws){
       break;
     case "NEW_GAME_TOKEN":
       //Server.AiMode = fals;
-      console.log("MSGCHECK");
-      console.log(message);
       if(message.payload.length > 0){
         Server.newGame(message.payload, ws);
       }

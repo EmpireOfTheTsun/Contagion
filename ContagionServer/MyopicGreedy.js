@@ -21,7 +21,6 @@ function aiTurnSimpleGreedy(aiMoves, removeOld, context, friendlyNodeStatus){
   else{
     greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, false, myMoves); //false to just add best
   }
-  console.log("DONE");
 } 
 
 //returns the id of the best node by fitness, using a greedy strategy
@@ -35,7 +34,6 @@ function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findW
   }
   for(i=0; i<ctx.formattedPeeps.length; i++){
     var fitness = greedyFitnessChange(i, friendlyNodeStatus, tokenInfluences, true, true, false); //3rd last is 'isAdd', 2nd is recursive, last is a modifier for primary node changing from enemy to friendly (not needed here)
-    console.log(i+"="+fitness);
 
     if (fitness > bestNodeValue){
       bestNodesID = [i];
@@ -55,9 +53,6 @@ function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findW
       }
     }
   }
-  console.log("Best IDs + val:");
-  console.log(bestNodesID);
-  console.log(bestNodeValue);
 
   //picks a random node from those with equal fitness
   var index = bestNodesID[Math.floor(Math.random() * bestNodesID.length)];
