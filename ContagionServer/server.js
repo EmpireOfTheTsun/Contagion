@@ -1,12 +1,13 @@
 //TODO: UPDATE DATABASE WITH LONGER NODES FLIPPED LENGTH
 Server.LocalMode = true; //Run on local machine or internet-facing
 Server.NeutralMode = true; //Supports neutral nodes (this is the default now)
-Server.TrialMode = false; //Running controlled trials with people
-Server.ExperimentMode = true; //For things like monte carlo...
+Server.TrialMode = true; //Running controlled trials with people
+Server.ExperimentMode = false; //For things like monte carlo...
 Server.NumberOfNodes = 20; //Changing this may require some refactoring...
 Server.TestMoves = [[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
 [ 6, 5, 12, 5, 2, 17, 7, 18, 9, 9 ],
-[ 7, 12, 9, 13, 13, 1, 4, 19, 10, 19 ]];
+[ 7, 12, 9, 13, 13, 1, 4, 19, 10, 19 ],
+[ 19, 14, 7, 11, 18, 9, 7, 5, 13, 1]];
 Server.playerTopologies = [];
 Server.ExponentStrength = 0.35; //Higher = more bias to high/low degree nodes in their respective strategies
 Server.ExistingTokensBias = 0; //Increases likelihood of placing tokens on nodes that already have tokens. Negative reduces the likelihood.
@@ -42,6 +43,8 @@ var http = require("http");
 var express = require("express");
 var nodemailer = require('nodemailer');
 var extMath = require('./math.min');
+var seededRNGGenerator = require('./seedrandom.min');
+
 var app = express();
 var PORT = process.env.PORT || 5001;
 //app.use(express.static(__dirname + "/"));
@@ -220,6 +223,13 @@ class GameState {
     this.playerOneScoreList = [];
     this.playerTwoScoreList = [];
     this.laplacianID = laplacianID;
+    //created rng with random seedword to make it deterministic
+    //We create this at the game level to prevent multiple games from affecting others' random number generation
+    this.rngThreshold = seededRNGGenerator("Waluigi");
+    //uses two RNGs because different strategies use different number of calls to random
+    this.rngStrategy = seededRNGGenerator("Shrek II");
+    this.rngStratCount=0;
+    this.rngThreshCount=0;
     if (Server.TrialMode){
       this.predeterminedAIMoves = Server.TestMoves[laplacianID];
     }
@@ -402,7 +412,10 @@ class GameState {
 
   //naturalEnd is true when the game ends by reaching the max number of rounds.
   GameState.prototype.killGame = function(naturalEnd, game, causer){
-    ("game over");
+    console.log("game over");
+    console.log(game.playerTwoMoves);
+    console.log(game.rngThreshCount);
+    console.log(game.rngStratCount);
     if(causer != null){
       try{
         if (causer == "p1"){
@@ -582,6 +595,8 @@ class GameState {
     });
 
     updatedPeeps.forEach(function(peep, index){
+      var rand = this.game.randThreshold(); //we need to call a rand for each node regardless of whether or not we use it to make sure the random numbers generated are the same each time
+
       //prevents / by 0 error for peeps surrounded by neutral peeps
       if (peep[4] > 0){
         var ratio = peep[3]/peep[4];
@@ -596,7 +611,6 @@ class GameState {
           }
         }
         else{
-          var rand = Math.random();
           //console.log(peep + " " + ratio + " " + rand); //use me for validation
           if(ratio>=rand){ //Adding random element for voter model
             peep[2] = 1;
@@ -709,7 +723,6 @@ class GameState {
       else{
         console.log("ERROR: NOT DEVELOPED FOR EXPERIMENTAL AI YET!");
       }
-
     }
   }
 
@@ -915,7 +928,19 @@ class GameState {
     this.prevAiMoves.forEach(function(move){
       aiMoves.push(move);
     });
+    //NOTE: Hack because its an insidious problem and this is just needed for the trial
+    this.playerTwoMoves = this.prevAiMoves;
     return;
+  }
+
+  GameState.prototype.randStrategy = function(){
+    this.rngStratCount++;
+    return this.rngStrategy();
+  }
+
+  GameState.prototype.randThreshold = function(){
+    this.rngThreshCount++;
+    return this.rngThreshold();
   }
 
   GameState.prototype.addPlayerTwo = function(ws){
@@ -1042,6 +1067,7 @@ wss.on('connection', ((ws) => {
 }));
 
 Server.sendClientMessage = function(message, ws){
+  console.log(message);
   try{
     ws.send(JSON.stringify(message));
   }
@@ -1086,12 +1112,10 @@ Server.processUsername = function(username, ws){
 
 Server.newGame = function(username, ws){
   //console.log("Checking username "+username);
-  if (username != null && username.length > 0){
-    Server.processUsername(username, ws);
-    ws.id = username; //just in case of collisions. Substring as database can only hold strings of certain length
-    if (ws.id.length > 36){
-      ws.id = ws.id.substring(0,36); //prevent too long usernames from making the db fail to record games. Should be fine if we stick to uuid
-    }
+  Server.processUsername(username, ws);
+  ws.id = username; //just in case of collisions. Substring as database can only hold strings of certain length
+  if (ws.id.length > 36){
+    ws.id = ws.id.substring(0,36); //prevent too long usernames from making the db fail to record games. Should be fine if we stick to uuid
   }
   let gameTest = Server.CurrentGames.filter(gameState => {
     return (gameState.playerOne == ws || gameState.playerTwo == ws);
@@ -1117,7 +1141,7 @@ Server.newGame = function(username, ws){
     }
     else{
       try{
-      var config = Server.getConfig(false, ws.permutation); //Don't need to retain the config for the next player if its vs the AI.
+        var config = Server.getConfig(false, ws.permutation); //Don't need to retain the config for the next player if its vs the AI.
       }
       catch(e){
         console.log("TRIGGERED FAILSAFE WITH GETTING CONFIG!");
@@ -1251,7 +1275,7 @@ Server.ParseMessage = function(message, ws){
       Server.submitMoves(message.payload, ws);
       break;
     case "NEW_GAME_TOKEN":
-      //Server.AiMode = fals;
+      message.payload = message.payload.toString();
       if(message.payload.length > 0){
         Server.newGame(message.payload, ws);
       }
