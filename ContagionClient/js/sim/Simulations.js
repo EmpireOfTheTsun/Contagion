@@ -6,7 +6,7 @@ I have made an attempt to refactor things into the overall Simulations class, bu
 
 //SIM DELARED AT 167
 function Simulations(){
-	Simulations.LocalMode = true;
+	Simulations.LocalMode = false;
 	Simulations.DebugMode = false;
 	Simulations.Username = "";
 
@@ -322,6 +322,7 @@ function Simulations(){
 
 				//Sends moves to the server and waits for a response
 				var prevMoves = sim.formatPeeps();
+				console.log(prevMoves);
 				Simulations.sendServerMessage(new Message(prevMoves, "SUBMIT_MOVES_TOKEN"));
 				Simulations.waitForServerMoves(sim);
 				Simulations.PreviousMoves = cloneObject(prevMoves);
@@ -734,13 +735,13 @@ function Sim(config){
 			ctx.textAlign = "center";
 			var label;
 			if (Simulations.WinState == 0){
-				label = "YOU LOSE!";
+				label = "Finished!";
 			}
 			else if (Simulations.WinState == 2){
-				label = "YOU WIN!";
+				label = "Finished!";
 			}
 			else if (Simulations.WinState == 1){
-				label = "IT'S A DRAW!";
+				label = "Finished!";
 			}
 			else if (Simulations.WinState == 3){
 				label = "OPPONENT LEFT!";

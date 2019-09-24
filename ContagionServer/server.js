@@ -251,7 +251,8 @@ class GameState {
     var p1id = (this.playerOne != null && this.playerOne != "AI") ? this.playerOne.id : "AI";
     var p2id = (this.playerTwo != null && this.playerTwo != "AI") ? this.playerTwo.id : "AI";
     if (p2id == "AI"){
-      this.playerTwoLayoutID = "";
+      p2id += Server.AiStrategy;
+      this.playerTwoLayoutID = this.playerOneLayoutID;
     }
     var query = `INSERT INTO master_games_table VALUES ('${this.gameID}', '${timestamp}', '${p1id}', '${p2id}', '${infectedPeepsString}',  '${this.playerOneLayoutID}', '${this.playerTwoLayoutID}');`;
     Server.sendSqlQuery(query, this);
