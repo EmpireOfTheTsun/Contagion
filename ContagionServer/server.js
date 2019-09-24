@@ -400,7 +400,7 @@ class GameState {
 
   GameState.prototype.registerClick = function(playerID, nodeID, action){
     var timestamp = Date.now() - this.gameStartTime;
-    var query = `INSERT INTO player_clicks_table VALUES ('${this.gameID}', '${playerID}', '${nodeID}', '${action}', '${timestamp}');`;
+    var query = `INSERT INTO player_clicks_table VALUES ('${this.gameID}', '${playerID}', '${nodeID}', '${action}', '${timestamp}', '${this.roundNumber}');`;
     Server.sendSqlQuery(query, this);
   }
 
