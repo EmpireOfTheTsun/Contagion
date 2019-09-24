@@ -1,5 +1,5 @@
 //TODO: UPDATE DATABASE WITH LONGER NODES FLIPPED LENGTH
-Server.LocalMode = true; //Run on local machine or internet-facing
+Server.LocalMode = false; //Run on local machine or internet-facing
 Server.NeutralMode = true; //Supports neutral nodes (this is the default now)
 Server.TrialMode = true; //Running controlled trials with people
 Server.ExperimentMode = false; //For things like monte carlo...
@@ -596,7 +596,7 @@ class GameState {
 
     updatedPeeps.forEach(function(peep, index){
       var rand = this.game.randThreshold(); //we need to call a rand for each node regardless of whether or not we use it to make sure the random numbers generated are the same each time
-
+      console.log("Peep "+index+" Thresh "+rand);
       //prevents / by 0 error for peeps surrounded by neutral peeps
       if (peep[4] > 0){
         var ratio = peep[3]/peep[4];
@@ -1280,7 +1280,7 @@ Server.ParseMessage = function(message, ws){
         Server.newGame(message.payload, ws);
       }
       else{ console.log("Somebody's fucked it!");
-          Server.newGame(Math.random()*10000, ws); //TODO FIND WHY THIS FAILED
+          Server.newGame(Math.random()*10000, ws);
       }
       break;
     case "EMERGENCY_AI":
