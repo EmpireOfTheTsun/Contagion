@@ -1069,7 +1069,7 @@ wss.on('connection', ((ws) => {
 }));
 
 Server.sendClientMessage = function(message, ws){
-  console.log(message);
+  //console.log(message);
   try{
     ws.send(JSON.stringify(message));
   }
