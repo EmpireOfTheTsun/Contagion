@@ -596,7 +596,9 @@ class GameState {
 
     updatedPeeps.forEach(function(peep, index){
       var rand = this.game.randThreshold(); //we need to call a rand for each node regardless of whether or not we use it to make sure the random numbers generated are the same each time
-      console.log("Peep "+index+" Thresh "+rand);
+      if(index < 3){
+      console.log("Peep "+index+" Thresh "+rand+" Round "+this.game.roundNumber);
+      }
       //prevents / by 0 error for peeps surrounded by neutral peeps
       if (peep[4] > 0){
         var ratio = peep[3]/peep[4];
