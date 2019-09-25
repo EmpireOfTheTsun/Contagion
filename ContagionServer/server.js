@@ -1287,6 +1287,7 @@ Server.ParseMessage = function(message, ws){
     message = JSON.parse(message);
   }
   catch(err){
+    console.log("BAD");
     console.log(message);
     return;
   }
