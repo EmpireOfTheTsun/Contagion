@@ -288,7 +288,7 @@ class GameState {
     var p1Nodes = [];
     var p2Nodes = [];
 
-    this.formattedPeeps.forEach(function(peep){
+    this.formattedPeeps.forEach(function(peep, index){
         if (peep[2] == 1){
           p1Nodes.push(index);
         }
