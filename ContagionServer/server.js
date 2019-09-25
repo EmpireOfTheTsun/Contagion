@@ -1,5 +1,5 @@
 //TODO: UPDATE DATABASE WITH LONGER NODES FLIPPED LENGTH
-Server.LocalMode = false; //Run on local machine or internet-facing
+Server.LocalMode = true; //Run on local machine or internet-facing
 Server.NeutralMode = true; //Supports neutral nodes (this is the default now)
 Server.TrialMode = true; //Running controlled trials with people
 Server.ExperimentMode = false; //For things like monte carlo...
@@ -296,6 +296,9 @@ class GameState {
           p2Nodes.push(index);
         }
     });
+
+    console.log(p1Nodes);
+    console.log(p2Nodes);
 
 
     var query = `INSERT INTO player_actions_table VALUES ('${this.gameID}', ${this.roundNumber}, '${this.flippedNodes}', '${this.playerOneMoves}' ,'${this.playerTwoMoves}', ${this.playerOneTime}, ${this.playerTwoTime}. ${p1Nodes}, ${p2Nodes});`;
