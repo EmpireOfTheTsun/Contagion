@@ -285,15 +285,14 @@ class GameState {
     });
     p2MovesString = p2MovesString.slice(0, -1);
 
-    var originalPeeps = clone(this.formattedPeeps);
     var p1Nodes = [];
     var p2Nodes = [];
 
-    originalPeeps.forEach(function(peep, index){
-        if (updatedPeeps[index][2] == 1){
+    this.formattedPeeps.forEach(function(peep, index){
+        if (peep[index][2] == 1){
           p1Nodes.push(index);
         }
-        else if (updatedPeeps[index][2] == 0){
+        else if (peep[index][2] == 0){
           p2Nodes.push(index);
         }
     });
