@@ -6,8 +6,8 @@ I have made an attempt to refactor things into the overall Simulations class, bu
 
 //SIM DELARED AT 167
 function Simulations(){
-	Simulations.LocalMode = false;
-	Simulations.DebugMode = false;
+	Simulations.LocalMode = true;
+	Simulations.DebugMode = true;
 	Simulations.Username = "";
 
 	function cookieManager() {
@@ -321,11 +321,10 @@ function Simulations(){
 			self.sims.forEach(function(sim){
 
 				//Sends moves to the server and waits for a response
-				var prevMoves = sim.formatPeeps();
-				console.log(prevMoves);
-				Simulations.sendServerMessage(new Message(prevMoves, "SUBMIT_MOVES_TOKEN"));
+				var movesToSubmit = sim.filterNewTokens(); //adds latest tokens onto the end of the list
+				console.log(movesToSubmit);
+				Simulations.sendServerMessage(new Message(movesToSubmit, "SUBMIT_MOVES_TOKEN"));
 				Simulations.waitForServerMoves(sim);
-				Simulations.PreviousMoves = cloneObject(prevMoves);
 			});
 	}
 
@@ -538,13 +537,25 @@ function Sim(config){
 
 	//This returns the ID for each orbit. If node has 2 orbits, will appear twice, etc.
 	self.formatPeeps = function(){
-		var formattedPeeps = []
+		var formattedPeeps = [];
 		self.peeps.forEach(function(peep){
 			for(i=0; i<peep.playerOrbits.length; i++){
 				formattedPeeps.push(peep.id);
 			}
 		});
 		return formattedPeeps;
+	}
+
+	self.filterNewTokens = function(){ //NB: If want to do more than one in future, here is a good place to change
+		var currentPeeps = self.formatPeeps();
+		var prevPeeps = cloneObject(Simulations.PreviousMoves);
+		prevPeeps.forEach(function(p){
+			var index = currentPeeps.indexOf(p);
+			currentPeeps.splice(index, 1);
+		});
+		console.log(currentPeeps);
+		Simulations.PreviousMoves.push(currentPeeps[0]);
+		return Simulations.PreviousMoves;
 	}
 
 	self.resize = function(){
