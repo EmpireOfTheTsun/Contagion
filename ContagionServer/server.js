@@ -112,6 +112,8 @@ const Message = require('./Message.js');
 Server.sendSqlQuery = function(query, game){
   //console.log(query);
   if (!Server.LocalMode && !Server.ExperimentMode){
+    console.log("LOOKATME");
+    console.log(query);
     try{
       client.query(query, function(err, result){
         if (err){
@@ -301,7 +303,7 @@ class GameState {
     console.log(p2Nodes);
 
 
-    var query = `INSERT INTO player_actions_table VALUES ('${this.gameID}', ${this.roundNumber}, '${this.flippedNodes}', '${this.playerOneMoves}' ,'${this.playerTwoMoves}', ${this.playerOneTime}, ${this.playerTwoTime}. ${p1Nodes}, ${p2Nodes});`;
+    var query = `INSERT INTO player_actions_table VALUES ('${this.gameID}', ${this.roundNumber}, '${this.flippedNodes}', '${this.playerOneMoves}' ,'${this.playerTwoMoves}', ${this.playerOneTime}, ${this.playerTwoTime}. ${this.p1Nodes}, ${this.p2Nodes});`;
     Server.sendSqlQuery(query, this);
     this.flippedNodes = [];
   }
