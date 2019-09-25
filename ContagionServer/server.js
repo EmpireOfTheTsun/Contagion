@@ -285,7 +285,21 @@ class GameState {
     });
     p2MovesString = p2MovesString.slice(0, -1);
 
-    var query = `INSERT INTO player_actions_table VALUES ('${this.gameID}', ${this.roundNumber}, '${this.flippedNodes}', '${this.playerOneMoves}' ,'${this.playerTwoMoves}', ${this.playerOneTime}, ${this.playerTwoTime});`;
+    var originalPeeps = clone(this.formattedPeeps);
+    var p1Nodes = [];
+    var p2Nodes = [];
+
+    originalPeeps.forEach(function(peep, index){
+        if (updatedPeeps[index][2] == 1){
+          p1Nodes.push(index);
+        }
+        else if (updatedPeeps[index][2] == 0){
+          p2Nodes.push(index);
+        }
+    });
+
+
+    var query = `INSERT INTO player_actions_table VALUES ('${this.gameID}', ${this.roundNumber}, '${this.flippedNodes}', '${this.playerOneMoves}' ,'${this.playerTwoMoves}', ${this.playerOneTime}, ${this.playerTwoTime}. ${p1Nodes}, ${p2Nodes});`;
     Server.sendSqlQuery(query, this);
     this.flippedNodes = [];
   }
