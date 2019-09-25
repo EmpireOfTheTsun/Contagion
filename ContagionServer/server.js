@@ -1,5 +1,5 @@
 //TODO: UPDATE DATABASE WITH LONGER NODES FLIPPED LENGTH
-Server.LocalMode = true; //Run on local machine or internet-facing
+Server.LocalMode = false; //Run on local machine or internet-facing
 Server.NeutralMode = true; //Supports neutral nodes (this is the default now)
 Server.TrialMode = true; //Running controlled trials with people
 Server.ExperimentMode = false; //For things like monte carlo...
@@ -1287,6 +1287,7 @@ Server.ParseMessage = function(message, ws){
     message = JSON.parse(message);
   }
   catch(err){
+    console.log(message);
     return;
   }
   switch(message.status){
