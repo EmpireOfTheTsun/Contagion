@@ -4,15 +4,15 @@ var strategyType;
 var playerID;
 var game;
 var moves = [];
-var experimentNumber = 0;
+var experimentsList = [];
 var gamesRemaining = 0;
-var gamesPerExperiment = 5;
+var gamesPerExperiment = 3000;
 
 var cumScoreServer = 0;
 var cumScoreExperiment = 0;
 var resultsList = [];
 
-var strategyNames=["Random","DegreeSensitiveHigh","DegreeSensitiveLow","SimpleGreedy","Equilibrium"]; //NOT 25 exp!
+var strategyNames=["Random"];//,"DegreeSensitiveHigh","DegreeSensitiveLow","SimpleGreedy","Equilibrium"]; //NOT 25 exp!
 
 const Message = require('./Message.js');
 Server = require('./server.js');
@@ -38,21 +38,28 @@ function setupExperiment(context){ //COULD do this without websockets. Not sure 
         parseEventExperiment(event);
     };
 
+    var len = strategyNames.length; //Used to make code more readable
+    for (x=0; x<len; x++){
+        for(y=x; y<len; y++){
+            experimentsList.push([x,y]);
+        }
+    }
+
     newExperiment();
 }
 
 function newExperiment(){
-    var len = strategyNames.length; //Used to make code more readable
-    var experimentLimit = len * len;
-    if(experimentNumber < experimentLimit){
-        console.log("EXPERIMENT#"+experimentNumber);
-        serverStrategyIndex = experimentNumber % len;// Remainder operator. E.g. 7 % 5 = 2
-        experimentStrategyIndex = Math.floor(experimentNumber/len);// These two will go 0-0,1-0,2-0,3-0,4-0,0-1,etc. for a 5-strategy selection.
+
+    if(experimentsList.length > 0){
+        console.log("EXP Remaining:"+experimentsList.length);
         cumScoreServer = 0;
         cumScoreExperiment = 0;
+        var experimentStrategies = experimentsList.shift();
+        ctx.AiStrategy = strategyNames[experimentStrategies[1]];
+        strategyType = strategyNames[experimentStrategies[0]];
+        playerID = "Exp_AI_"+strategyType;
         gamesRemaining = gamesPerExperiment;
-        ctx.AiStrategy = strategyNames[serverStrategyIndex];
-        beginPairwiseExperiment(strategyNames[experimentStrategyIndex]); //IS GREMAIN BEST VAR
+        gameStart(); 
     }
     else{
         console.log("FIN");
@@ -60,18 +67,12 @@ function newExperiment(){
     }
 }
 
-function beginPairwiseExperiment(strategy){ //COULD do this without websockets. Not sure of the value of rewriting though.
-    strategyType = strategy;
-    playerID = "Exp_AI_"+strategyType;
-    gameStart(gamesRemaining);
-}
 
-function gameStart(gamesRemaining){
+function gameStart(){
     if(gamesRemaining > 0){
         sendServerMessage(new Message(playerID,"NEW_GAME_TOKEN"));
     }
     else{
-        experimentNumber++;
         var resultsWrapper = [];
         resultsWrapper.push(strategyType);
         resultsWrapper.push(cumScoreExperiment/gamesPerExperiment);
@@ -90,13 +91,14 @@ function updateState(){//We are using the state already held on the server. Func
 }
 
 function gameOver(payload){//Mostly just for logging final results from this AI's POV to ensure consistency
-    var myScore = payload[1][9];
+    var myScore = payload[1][9]; //9 is because it's a list of 10 vaules, one for score at each round. 9 is the last.
     var opponentScore = payload[2][9];
     moves = [];
+    game = null;
     cumScoreExperiment += myScore;
     cumScoreServer += opponentScore;
     gamesRemaining--;
-    gameStart(gamesRemaining);
+    gameStart();
 }
 
 function parseEventExperiment(message){

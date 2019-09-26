@@ -1,9 +1,10 @@
 //TODO: UPDATE DATABASE WITH LONGER NODES FLIPPED LENGTH
-Server.LocalMode = false; //Run on local machine or internet-facing
+Server.LocalMode = true; //Run on local machine or internet-facing
 Server.NeutralMode = true; //Supports neutral nodes (this is the default now)
-Server.TrialMode = true; //Running controlled trials with people
-Server.ExperimentMode = false; //For things like monte carlo...
+Server.TrialMode = false; //Running controlled trials with people
+Server.ExperimentMode = true; //For things like monte carlo...
 Server.NumberOfNodes = 20; //Changing this may require some refactoring...
+Server.RemoveOldNodes = false; //TODO: Update game logic (DB side done)
 Server.TestMoves = [[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
 [ 6, 5, 12, 5, 2, 17, 7, 18, 9, 9 ],
 [ 7, 12, 9, 13, 13, 1, 4, 19, 10, 19 ],
@@ -12,9 +13,7 @@ Server.playerTopologies = [];
 Server.ExponentStrength = 0.35; //Higher = more bias to high/low degree nodes in their respective strategies
 Server.ExistingTokensBias = 0; //Increases likelihood of placing tokens on nodes that already have tokens. Negative reduces the likelihood.
 //Does not affect random, equilibrium or predetermined strategies.
-
-
-console.log("Server starting!");
+console.info("Server starting!");
 
 shuffle = function(a) {
   for (let i = a.length - 1; i > 0; i--) {
@@ -69,7 +68,7 @@ if(!Server.LocalMode){
     connectionString: process.env.DATABASE_URL,
     ssl: true,
   });
-  console.log(process.env.DATABASE_URL);
+  console.info(process.env.DATABASE_URL);
   client.connect();
 }
 
@@ -92,7 +91,7 @@ laplaciansList = configData.laplacians;
 
 Server.LoadExperiment = function(times){
   if(times > 100){
-    console.log("Error Initialising!");
+    console.error("Error Initialising!");
     return;
   }
   if(configData.laplacians.length != 0){
@@ -110,10 +109,8 @@ if(Server.ExperimentMode){
 const Message = require('./Message.js');
 
 Server.sendSqlQuery = function(query, game){
-  //console.log(query);
   if (!Server.LocalMode && !Server.ExperimentMode){
-    console.log("LOOKATME");
-    console.log(query);
+    console.info(query);
     try{
       client.query(query, function(err, result){
         if (err){
@@ -128,12 +125,10 @@ Server.sendSqlQuery = function(query, game){
 }
 
 Server.databaseFailure = function(err, game, query){
-  console.log(err);
-  console.log(query);
+  console.error(err);
 
   //only emails at most once per hour
   if (Date.now() - Server.lastAlertTime > 3600000){
-    console.log("triggered");
     Server.lastAlertTime = Date.now();
     Server.sendMail("URGENT: Error Adding to Database! "+query, err);
   }
@@ -162,9 +157,9 @@ Server.sendMail = function(emailSubject, errtext){
 
   transporter.sendMail(mailOptions, function(error, info){
   if (error) {
-    console.log(error);
+    console.error(error);
   } else {
-    console.log('Email sent: ' + info.response);
+    console.info('Email sent: ' + info.response);
   }
 });
 
@@ -187,7 +182,7 @@ function Server(){
   Server.RoundLimit = 10;
   Server.AiMode = true;
   Server.InfectionMode = "wowee"; //"majority" or anything else
-  Server.AiStrategy = "Random";//"SimpleGreedy";//"DegreeSensitiveHigh";//"Equilibrium";//"Predetermined";//"SimpleGreedy";
+  Server.AiStrategy = "SimpleGreedy";//"Random";//"SimpleGreedy";//"DegreeSensitiveHigh";//"Equilibrium";//"Predetermined";//"SimpleGreedy";
   Server.TokenProtocol = "Incremental"; //"AtStart" or "Incremental"
   Server.AiWaiting = false;
   Server.lastAlertTime = 0;
@@ -256,7 +251,7 @@ class GameState {
       p2id += Server.AiStrategy;
       this.playerTwoLayoutID = this.playerOneLayoutID;
     }
-    var query = `INSERT INTO master_games_table VALUES ('${this.gameID}', '${timestamp}', '${p1id}', '${p2id}', '${infectedPeepsString}',  '${this.playerOneLayoutID}', '${this.playerTwoLayoutID}');`;
+    var query = `INSERT INTO master_games_table VALUES ('${this.gameID}', '${timestamp}', '${p1id}', '${p2id}', '${infectedPeepsString}',  '${this.playerOneLayoutID}', '${this.playerTwoLayoutID}', '${Server.RemoveOldNodes}');`;
     Server.sendSqlQuery(query, this);
   }
 
@@ -298,10 +293,6 @@ class GameState {
           p2Nodes.push(index);
         }
     });
-
-    console.log(p1Nodes);
-    console.log(p2Nodes);
-
 
     var query = `INSERT INTO player_actions_table VALUES ('${this.gameID}', ${this.roundNumber}, '${this.flippedNodes}', '${this.playerOneMoves}' ,'${this.playerTwoMoves}', ${this.playerOneTime}, ${this.playerTwoTime}, '${p1Nodes}', '${p2Nodes}');`;
     Server.sendSqlQuery(query, this);
@@ -395,22 +386,22 @@ class GameState {
     var now = Date.now();
     if (!Server.demoMode && !Server.ExperimentMode){
       if (now - game.playerOneLastHeartbeat > Server.heartAttackTime){
-        console.log("Heart attack1!");
+        console.error("Heart attack1!");
         try{
           Server.sendResults(2, game, "disconnect");
         }
         catch(e){
-          console.log("Error when sending gameend msg: "+e);
+          console.error("Error when sending gameend msg: "+e);
         }
         game.killGame(false, game);
       }
       if(game.playerTwo !== "AI" && game.playerTwo !== null && now-game.playerTwoLastHeartbeat > Server.heartAttackTime){
-        console.log("Heart attack2!");
+        console.error("Heart attack2!");
         try{
           Server.sendResults(1, game, "disconnect");
         }
         catch(e){
-          console.log("Error when sending gameend msg: "+e);
+          console.error("Error when sending gameend msg: "+e);
         }
         game.killGame(false, game);
       }
@@ -431,10 +422,9 @@ class GameState {
 
   //naturalEnd is true when the game ends by reaching the max number of rounds.
   GameState.prototype.killGame = function(naturalEnd, game, causer){
-    console.log("game over");
-    console.log(game.playerTwoMoves);
-    console.log(game.rngThreshCount);
-    console.log(game.rngStratCount);
+    // console.log("game over");
+    // console.log(game.playerOneMoves);
+    // console.log(game.playerTwoMoves);
     if(causer != null){
       try{
         if (causer == "p1"){
@@ -446,7 +436,7 @@ class GameState {
       }
       catch(err){} //Suppresses error if other player is an AI
       if(causer != "p1" && causer != "p2"){
-        console.log("wtf! "+causer);
+        console.error("wtf! "+causer);
         Server.sendMail("URGENT: Unknown cause of game failure!",causer);
       }
     }
@@ -615,9 +605,6 @@ class GameState {
 
     updatedPeeps.forEach(function(peep, index){
       var rand = this.game.randThreshold(); //we need to call a rand for each node regardless of whether or not we use it to make sure the random numbers generated are the same each time
-      if(index < 3){
-      console.log("Peep "+index+" Thresh "+rand+" Round "+this.game.roundNumber);
-      }
       //prevents / by 0 error for peeps surrounded by neutral peeps
       if (peep[4] > 0){
         var ratio = peep[3]/peep[4];
@@ -632,7 +619,6 @@ class GameState {
           }
         }
         else{
-          //console.log(peep + " " + ratio + " " + rand); //use me for validation
           if(ratio>=rand){ //Adding random element for voter model
             peep[2] = 1;
           }
@@ -666,7 +652,6 @@ class GameState {
       this.aiTurnPredetermined(aiMoves, oneNodeOnly);
       return;
     }
-    //console.log("FFFF "+this.playerOneMoves);
     switch(strategy){
       case "SimpleGreedy":
         var aiTurnSimpleGreedy = require('./MyopicGreedy.js');
@@ -686,7 +671,6 @@ class GameState {
         this.aiTurnRandom(aiMoves, oneNodeOnly, friendlyNodeStatus);
         break;
     }
-    //console.log("AIII:"+aiMoves);
     if(this.isServerPlayer(friendlyNodeStatus)){
       this.playerTwoMoves = aiMoves;
     }
@@ -742,7 +726,7 @@ class GameState {
         });
       }
       else{
-        console.log("ERROR: NOT DEVELOPED FOR EXPERIMENTAL AI YET!");
+        console.error("ERROR: NOT DEVELOPED FOR EXPERIMENTAL AI YET!");
       }
     }
   }
@@ -756,9 +740,6 @@ class GameState {
       this.aiTurnRandom(aiMoves, oneNodeOnly, friendlyNodeStatus);
       return;
     }
-    // console.log("PARAMETERCHECK");
-    // console.log(this.prevAiMoves);
-    // console.log(this.playerOneMoves);
     if(Server.TokenProtocol == "Incremental"){
       var friendlyMoves;
       var enemyMoves; //TODO: Is this actually a vector?
@@ -793,15 +774,14 @@ class GameState {
       var bestNode = -1;
 
       for (var i=0; i < Server.NumberOfNodes; i++){
-        var probabilitiesVector = this.createProbabilitiesVector(laplacian, friendlyMovesVector, i, false);
+        var probabilitiesVector = this.createProbabilitiesVector(laplacian, friendlyMovesVector, i);
         var selectionFitness = this.calculateFitness(probabilitiesVector);
         if (selectionFitness > maxScore){
           maxScore = selectionFitness;
           bestNode = i;
         }
       }
-      //console.log("BEST IS "+bestNode);
-      this.createProbabilitiesVector(laplacian, friendlyMovesVector, bestNode, true); //This outputs the best one's details. Can remove if needed!
+      this.createProbabilitiesVector(laplacian, friendlyMovesVector, bestNode);
       var peepIndex = bestNode;
 
       if(this.isServerPlayer(friendlyNodeStatus)){
@@ -816,24 +796,16 @@ class GameState {
       return;
     }
     else{
-      console.log("ERROR! This algorithm hasn't been developed for non-incremental token protocol yet!");
+      console.error("ERROR! This algorithm hasn't been developed for non-incremental token protocol yet!");
     }
   }
 
-  GameState.prototype.createProbabilitiesVector = function(laplacian, friendlyMovesVector, i, isLogging){
+  GameState.prototype.createProbabilitiesVector = function(laplacian, friendlyMovesVector, i){
     laplacian[i][i]++;
     friendlyMovesVector[i]++; //adds the token to test to the node. This affects both L and p_b (ai moves)
 
     var invLaplacian = extMath.inv(laplacian);
     var probVector = extMath.multiply(friendlyMovesVector, invLaplacian);
-    // if (isLogging == true){
-    //   console.log("Pa:");
-    //   console.log(friendlyMovesVector);
-    //   console.log("Ua:");
-    //   console.log(probVector);
-    //   console.log("Inverted Matrix:");
-    //   console.log(invLaplacian);
-    // }
 
     laplacian[i][i]--;
     friendlyMovesVector[i]--; //reverts the change to this var to avoid an expensive clone operation
@@ -846,7 +818,7 @@ class GameState {
   }
 
   GameState.prototype.aiTurnDegreeSensitiveTest = function(aiMoves, oneNodeOnly, lowDegreeSensitivity, friendlyNodeStatus){
-    console.log("ERROR! Don't use this until verified correct!");
+    console.error("ERROR! Don't use this until verified correct!");
     return;
     var monteOrig = [];
     for (var i=0; i < Server.NumberOfNodes; i++){
@@ -864,11 +836,9 @@ class GameState {
             this.aiTurnDegreeSensitive(aiMoves, oneNodeOnly, lowDegreeSensitivity, friendlyNodeStatus, monte);
           }
         }
-        console.log("STR="+Server.ExponentStrength+" BIAS="+Server.ExistingTokensBias);
         for (var x=0; x < Server.NumberOfNodes; x++){
           monte[x] = monte[x] / 10000;
         }
-        console.log(monte);
       }
 
     }
@@ -907,14 +877,15 @@ class GameState {
 
       //nodeWeights[i] = nodeWeights[i] * 100 / max; //normalises the list, becomes % chance to pick
 
-      //console.log(nodeWeights);
       // for (var i=0; i < 10000; i++){
       //     monte[this.chooseFromDistribution(nodeWeights, 100)]++;
       // }
-      //console.log(monte);
       var peepIndex = this.chooseFromDistribution(nodeWeights, max);
       if(this.isServerPlayer(friendlyNodeStatus)){
-        this.prevAiMoves.push(peepIndex); //TODO: This is different to the others. Still valid?
+        this.prevAiMoves.push(peepIndex);
+        this.prevAiMoves.forEach(function(move){
+          aiMoves.push(move);
+        });
       }
       else{
         aiMoves.push(peepIndex);
@@ -926,7 +897,7 @@ class GameState {
       return;
     }
     else{
-      console.log("ERROR! This algorithm hasn't been developed for non-incremental protocol yet!");
+      console.error("ERROR! This algorithm hasn't been developed for non-incremental protocol yet!");
     }
   }
 
@@ -938,12 +909,12 @@ class GameState {
         return i;
       }
     }
-    console.log("ERROR CHOOSING FROM DISTRIBUTION!");
+    console.error("ERROR CHOOSING FROM DISTRIBUTION!");
   }
 
 
   GameState.prototype.aiTurnPredetermined = function(aiMoves, oneNodeOnly){
-    console.log("WARNING: NOT UPDATED FOR EXPERIMENTAL AI");
+    console.info("WARNING: NOT UPDATED FOR EXPERIMENTAL AI");
     var peepIndex = this.predeterminedAIMoves[this.roundNumber];
     this.prevAiMoves.push(peepIndex);
     this.prevAiMoves.forEach(function(move){
@@ -982,7 +953,7 @@ class GameState {
 
   GameState.prototype.outOfTime = function(isPlayerOne){
     if(!Server.demoMode){
-      console.log("!!!!OUTTATIME: "+isPlayerOne);
+      console.info("!!!!OUTTATIME: "+isPlayerOne);
       if (isPlayerOne){
         Server.sendResults(1, game, "time");
         Server.sendResults(2, game, "disconnect");
@@ -1007,7 +978,7 @@ Server.validateGame = function(ws){
     return (gameState.playerOne == ws || gameState.playerTwo == ws);
   });
   if (game.length > 1){
-    console.log("ERR: USER IS IN MUPLTIPLE GAMES.");
+    console.err("ERR: USER IS IN MUPLTIPLE GAMES.");
     return null;
   }
   if (game.length < 1){
@@ -1016,7 +987,7 @@ Server.validateGame = function(ws){
 
   game = game[0];
   if (game.roundNumber > 10){
-    console.log("ERR: User submit moves but game already over.");
+    console.err("ERR: User submit moves but game already over.");
   }
 
   else return game;
@@ -1028,7 +999,7 @@ Server.submitMoves = function(message, ws){
     return;
   }
   if(Server.TokenProtocol == "Incremental" && message.length != game.roundNumber+1){
-    console.log("ERR ERR WRONG NO OF TOKENS!"+message.length+ " "+game.roundNumber);
+    console.error("ERR ERR WRONG NO OF TOKENS!"+message.length+ " "+game.roundNumber);
   }
   if (game.playerOne === ws){
     game.addPlayerOneMoves(message);
@@ -1044,7 +1015,6 @@ Server.getConfig = function(twoPlayerMode, perm){
       var topologyID = Server.CurrentTopologyIndex;
       Server.CurrentTopologyIndex = (Server.CurrentTopologyIndex + 1) % serverConfigs.length;
     //P1 Topology
-    //console.log("CHECK"+Server.CurrentTopologyLayoutIndexes);
     var layoutID = Server.CurrentTopologyLayoutIndexes[topologyID];
     Server.CurrentTopologyLayoutIndexes[topologyID] = (Server.CurrentTopologyLayoutIndexes[topologyID] + 1) % serverConfigs[topologyID].length;
     var p2LayoutID = Server.CurrentTopologyLayoutIndexes[topologyID];
@@ -1076,40 +1046,38 @@ Server.getConfig = function(twoPlayerMode, perm){
 
 wss.on('connection', ((ws) => {
   ws.id = uuidv4();
-  console.log("new connection"+ws.id);
+  console.info("new connection"+ws.id);
   ws.on('message', (message) => {
       Server.ParseMessage(message, ws);
   });
   ws.on('end', () => {
-    console.log('Connection ended...');
   });
   ws.send('Successful Connection to Server');
   //need to store this ws now...
 }));
 
 Server.sendClientMessage = function(message, ws){
-  //console.log(message);
   try{
     ws.send(JSON.stringify(message));
   }
   catch(err){
-    console.log("ERR ERR ERR SENDING MESSAGE FAILURE:");
-    console.log(err);
+    console.error("ERR ERR ERR SENDING MESSAGE FAILURE:");
+    console.error(err);
   }
 }
 
 Server.processUsername = function(username, ws){
   var complete = false;
   if (username == undefined){
-    console.log("fuc1");
+    console.error("fuc1");
     username = uuidv4();
   }
   if (username == null){
-    console.log("fuc2");
+    console.error("fuc2");
     username = uuidv4();
   }
   if (!username.length > 0){
-    console.log("fuc3");
+    console.error("fuc3");
     username = uuidv4();
   }
   var found = Server.playerTopologies.find(function(item){
@@ -1122,7 +1090,6 @@ Server.processUsername = function(username, ws){
     var perm = Server.generatePerm();
     ws.permutation = perm;
     Server.playerTopologies.push([username, perm]);
-    console.log(Server.playerTopologies);
   }
   // for (int i=0; i<Server.playerTopologies.length){
   //   if(Server.playerTopologies)
@@ -1132,7 +1099,6 @@ Server.processUsername = function(username, ws){
 }
 
 Server.newGame = function(username, ws){
-  //console.log("Checking username "+username);
   Server.processUsername(username, ws);
   ws.id = username; //just in case of collisions. Substring as database can only hold strings of certain length
   if (ws.id.length > 36){
@@ -1165,7 +1131,7 @@ Server.newGame = function(username, ws){
         var config = Server.getConfig(false, ws.permutation); //Don't need to retain the config for the next player if its vs the AI.
       }
       catch(e){
-        console.log("TRIGGERED FAILSAFE WITH GETTING CONFIG!");
+        console.error("TRIGGERED FAILSAFE WITH GETTING CONFIG!");
         config = Server.getConfig(false);
       }
       ws.permutation.push(ws.permutation.shift());
@@ -1219,12 +1185,12 @@ Server.sendResults = function(playerNo, game, result){
 
     }
     else{
-      console.log("ERROR WHEN SENDING RESULTS!");
+      console.error("ERROR WHEN SENDING RESULTS!");
     }
   }
   catch(err){
-    console.log("ERROR WHEN SENDING RESULTS2!");
-    console.log(err);
+    console.error("ERROR WHEN SENDING RESULTS2!");
+    console.error(err);
   }
 }
 
@@ -1251,7 +1217,6 @@ Server.startTimer = function(game, status, duration, isPlayerOne){
 Server.registerHeartbeat = function(ws){
   game = Server.validateGame(ws);
   if (game == null){
-    //console.log("Heartbeat w/ no game");
     return;
   }
   else if (game.playerOne === ws){
@@ -1289,8 +1254,6 @@ Server.ParseMessage = function(message, ws){
     message = JSON.parse(message);
   }
   catch(err){
-    console.log("BAD");
-    console.log(message);
     return;
   }
   switch(message.status){
@@ -1302,7 +1265,7 @@ Server.ParseMessage = function(message, ws){
       if(message.payload.length > 0){
         Server.newGame(message.payload, ws);
       }
-      else{ console.log("Somebody's fucked it!");
+      else{ console.error("Somebody's fucked it!");
           Server.newGame(Math.random()*10000, ws);
       }
       break;

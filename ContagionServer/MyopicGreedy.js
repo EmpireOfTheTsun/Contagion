@@ -32,8 +32,10 @@ function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findW
     var worstTokensID = [-1];
     var worstTokenValue = 100;
   }
+
+  var hasFutureRounds = (ctx.roundNumber < 9); //On the final round, we want to change behaviour to only a one-round lookahead.
   for(i=0; i<ctx.formattedPeeps.length; i++){
-    var fitness = greedyFitnessChange(i, friendlyNodeStatus, tokenInfluences, true, true, false); //3rd last is 'isAdd', 2nd is recursive, last is a modifier for primary node changing from enemy to friendly (not needed here)
+    var fitness = greedyFitnessChange(i, friendlyNodeStatus, tokenInfluences, true, hasFutureRounds, false); //3rd last is 'isAdd', 2nd is recursive, last is a modifier for primary node changing from enemy to friendly (not needed here)
 
     if (fitness > bestNodeValue){
       bestNodesID = [i];
@@ -43,7 +45,7 @@ function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findW
       bestNodesID.push(i);
     } //TODO: I should test some of this for the fake AI player!
     if (findWorst && myMoves.includes(i)){ //If we're looking for the worst token & the node inspected has a token.
-      fitness = greedyFitnessChange(i, friendlyNodeStatus, tokenInfluences, false, true, false); //false to show we are removing a token
+      fitness = greedyFitnessChange(i, friendlyNodeStatus, tokenInfluences, false, hasFutureRounds, false); //false to show we are removing a token
       if (fitness < worstTokenValue){
         worstTokensID = [i];
         worstTokenValue = fitness;
