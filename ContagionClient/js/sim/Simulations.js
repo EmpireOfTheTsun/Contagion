@@ -7,17 +7,18 @@ I have made an attempt to refactor things into the overall Simulations class, bu
 //SIM DELARED AT 167
 function Simulations(){
 	Simulations.LocalMode = true;
-	Simulations.DebugMode = true;
+	Simulations.DebugMode = false;
 	Simulations.Username = "";
 
 	function cookieManager() {
-		if (!(document.cookie.length > 0) || document.cookie == null || document.cookie == undefined){
+		if (!(document.cookie.length > 0)){
+			console.log(document.cookie);
 			console.log("no cookie found. Setting now.");
-			var required = 1;//Math.floor(100000000 * Math.random());
+			var required = Math.floor(100000 * Math.random());
 			var user = "";
-			//while (user != required){
-		    user = 1; //prompt("Your random ID is: "+required+". Please write it on your questionnaire and enter it below.", "");
-		  	//}
+			while (user != required && user != "wowee"){
+		    	user = prompt("Your random ID is: "+required+". Please write it on your questionnaire and enter it below.", "");
+		  	}
 
 			document.cookie = user;
 			Simulations.Username = user;
@@ -27,6 +28,7 @@ function Simulations(){
 			console.log("Reading from cookie");
 			Simulations.Username = document.cookie;
 		}
+		Simulations.Username = "DEMO" + Simulations.Username;
 		console.log(Simulations.Username);
 	}
 
