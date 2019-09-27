@@ -6,13 +6,17 @@ var game;
 var moves = [];
 var experimentsList = [];
 var gamesRemaining = 0;
-var gamesPerExperiment = 3000;
+var gamesPerExperiment = 100;
 
 var cumScoreServer = 0;
 var cumScoreExperiment = 0;
+var winsServer = 0;
+var winsExperiment = 0;
 var resultsList = [];
 
-var strategyNames=["Random"];//,"DegreeSensitiveHigh","DegreeSensitiveLow","SimpleGreedy","Equilibrium"]; //NOT 25 exp!
+var strategyNames=["Random","DegreeSensitiveHigh","DegreeSensitiveLow","SimpleGreedy","Equilibrium"];
+//var strategyNames=["SimpleGreedy"];
+
 
 const Message = require('./Message.js');
 Server = require('./server.js');
@@ -54,6 +58,8 @@ function newExperiment(){
         console.log("EXP Remaining:"+experimentsList.length);
         cumScoreServer = 0;
         cumScoreExperiment = 0;
+        winsServer = 0;
+        winsExperiment = 0;
         var experimentStrategies = experimentsList.shift();
         ctx.AiStrategy = strategyNames[experimentStrategies[1]];
         strategyType = strategyNames[experimentStrategies[0]];
@@ -75,8 +81,10 @@ function gameStart(){
     else{
         var resultsWrapper = [];
         resultsWrapper.push(strategyType);
+        resultsWrapper.push(winsExperiment);
         resultsWrapper.push(cumScoreExperiment/gamesPerExperiment);
         resultsWrapper.push(ctx.AiStrategy);
+        resultsWrapper.push(winsServer);
         resultsWrapper.push(cumScoreServer/gamesPerExperiment);
         resultsList.push(resultsWrapper);
         newExperiment();
@@ -97,6 +105,15 @@ function gameOver(payload){//Mostly just for logging final results from this AI'
     game = null;
     cumScoreExperiment += myScore;
     cumScoreServer += opponentScore;
+    if(payload[0] == "win"){
+        winsExperiment++;
+    }
+    else if(payload[0] == "lose"){
+        winsServer++;
+    }
+    else{
+        console.log("bees");
+    }
     gamesRemaining--;
     gameStart();
 }

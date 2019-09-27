@@ -1,8 +1,8 @@
 //TODO: UPDATE DATABASE WITH LONGER NODES FLIPPED LENGTH
-Server.LocalMode = true; //Run on local machine or internet-facing
+Server.LocalMode = false; //Run on local machine or internet-facing
 Server.NeutralMode = true; //Supports neutral nodes (this is the default now)
-Server.TrialMode = false; //Running controlled trials with people
-Server.ExperimentMode = true; //For things like monte carlo...
+Server.TrialMode = true; //Running controlled trials with people
+Server.ExperimentMode = false; //For things like monte carlo...
 Server.NumberOfNodes = 20; //Changing this may require some refactoring...
 Server.RemoveOldNodes = false; //TODO: Update game logic (DB side done)
 Server.TestMoves = [[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
@@ -222,7 +222,7 @@ class GameState {
     this.laplacianID = laplacianID;
     //created rng with random seedword to make it deterministic
     //We create this at the game level to prevent multiple games from affecting others' random number generation
-    this.rngThreshold = seededRNGGenerator("Waluigi");
+    this.rngThreshold = seededRNGGenerator("WaluigiTime");
     //uses two RNGs because different strategies use different number of calls to random
     this.rngStrategy = seededRNGGenerator("Shrek II");
     this.rngStratCount=0;
@@ -704,6 +704,10 @@ class GameState {
       else{
         aiMoves.push(peepIndex);
       }
+      return;
+    }
+    else{
+      console.log("Temporarily disabling other options.");
       return;
     }
     if (!oneNodeOnly){
