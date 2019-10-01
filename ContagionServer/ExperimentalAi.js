@@ -6,10 +6,12 @@ var game;
 var moves = [];
 var experimentsList = [];
 var gamesRemaining = 0;
-var gamesPerExperiment = 100;
+var gamesPerExperiment = 1000;
 
 var cumScoreServer = 0;
+var cumFinalPercentageServer = 0;
 var cumScoreExperiment = 0;
+var cumFinalPercentageExperiment = 0;
 var winsServer = 0;
 var winsExperiment = 0;
 var resultsList = [];
@@ -57,7 +59,9 @@ function newExperiment(){
     if(experimentsList.length > 0){
         console.log("EXP Remaining:"+experimentsList.length);
         cumScoreServer = 0;
+        cumFinalPercentageServer = 0;
         cumScoreExperiment = 0;
+        cumFinalPercentageExperiment = 0;
         winsServer = 0;
         winsExperiment = 0;
         var experimentStrategies = experimentsList.shift();
@@ -82,14 +86,25 @@ function gameStart(){
         var resultsWrapper = [];
         resultsWrapper.push(strategyType);
         resultsWrapper.push(winsExperiment);
-        resultsWrapper.push(cumScoreExperiment/gamesPerExperiment);
+        var avgPercentInfectedExperiment = calculateAveragePercantageInfected(cumScoreExperiment);
+        resultsWrapper.push(avgPercentInfectedExperiment);
+        resultsWrapper.push(Math.round(cumFinalPercentageExperiment*100/gamesPerExperiment) / 100);
         resultsWrapper.push(ctx.AiStrategy);
         resultsWrapper.push(winsServer);
-        resultsWrapper.push(cumScoreServer/gamesPerExperiment);
+        var avgPercentInfectedServer = calculateAveragePercantageInfected(cumScoreServer);
+        resultsWrapper.push(avgPercentInfectedServer);
+        resultsWrapper.push(Math.round(cumFinalPercentageServer*100/gamesPerExperiment) / 100);
+
         resultsList.push(resultsWrapper);
         newExperiment();
     }
 
+}
+
+function calculateAveragePercantageInfected(cumScore){
+    var avgScore = cumScore/gamesPerExperiment;
+    var avgPercentInfected = avgScore / 20; //20 because over 10 rounds, and a score of 200 maps to 100% for each round. E.g. score of 40 means 20% infected that round.
+    return Math.round(avgPercentInfected)/100; //to be from 0-1
 }
 
 function updateState(){//We are using the state already held on the server. Function names are preserved from the clientside for consistency.
@@ -100,11 +115,15 @@ function updateState(){//We are using the state already held on the server. Func
 
 function gameOver(payload){//Mostly just for logging final results from this AI's POV to ensure consistency
     var myScore = payload[1][9]; //9 is because it's a list of 10 vaules, one for score at each round. 9 is the last.
+    var myFinalPercentage = calculateFinalPercentageInfected(payload[1]);
     var opponentScore = payload[2][9];
+    var opponentFinalPercentage = calculateFinalPercentageInfected(payload[2]); //Theoretically could do 1 - myFP as assume no neutral nodes by end, but better to future-proof this.
     moves = [];
     game = null;
     cumScoreExperiment += myScore;
     cumScoreServer += opponentScore;
+    cumFinalPercentageExperiment += myFinalPercentage;
+    cumFinalPercentageServer += opponentFinalPercentage;
     if(payload[0] == "win"){
         winsExperiment++;
     }
@@ -116,6 +135,12 @@ function gameOver(payload){//Mostly just for logging final results from this AI'
     }
     gamesRemaining--;
     gameStart();
+}
+
+function calculateFinalPercentageInfected(scoresList){
+    var lastRoundAdditionalScore= scoresList[9] - scoresList[8];
+    var finalRoundPercentage = lastRoundAdditionalScore / 2; //As above, score of 200 maps to 100%, so N maps to N/2%
+    return finalRoundPercentage/100;//As above, to be 0-1.
 }
 
 function parseEventExperiment(message){

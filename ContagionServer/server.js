@@ -1,5 +1,5 @@
 //TODO: UPDATE DATABASE WITH LONGER NODES FLIPPED LENGTH
-Server.LocalMode = true; //Run on local machine or internet-facing
+Server.LocalMode = false; //Run on local machine or internet-facing
 Server.NeutralMode = true; //Supports neutral nodes (this is the default now)
 Server.TrialMode = true; //Running controlled trials with people
 Server.ExperimentMode = false; //For things like monte carlo...
@@ -222,15 +222,18 @@ class GameState {
     this.laplacianID = laplacianID;
     //created rng with random seedword to make it deterministic
     //We create this at the game level to prevent multiple games from affecting others' random number generation
-    this.rngThreshold = seededRNGGenerator("WaluigiTime");
+    if(Server.TrialMode){
+      this.predeterminedAIMoves = Server.TestMoves[laplacianID];
+      this.rngThreshold = seededRNGGenerator("WaluigiTime");
+      this.rngStrategy = seededRNGGenerator("Shrek II");
+    }
+    else{
+      this.rngThreshold = seededRNGGenerator(this.gameID+"1");
+      this.rngStrategy = seededRNGGenerator(this.gameID);
+    }
     //uses two RNGs because different strategies use different number of calls to random
-    this.rngStrategy = seededRNGGenerator("Shrek II");
     this.rngStratCount=0;
     this.rngThreshCount=0;
-    if (Server.TrialMode){
-      this.predeterminedAIMoves = Server.TestMoves[laplacianID];
-    }
-    //
   }
 
 }
@@ -510,7 +513,7 @@ class GameState {
     var p1additionalScore = playerOnePeepsCount * 10;
     var p2additionalScore = playerTwoPeepsCount * 10;
 
-    if(this.roundNumber == 10){
+    if(this.roundNumber == 10 && !Server.ExperimentMode){
       p1additionalScore = p1additionalScore * 5;
       p2additionalScore = p2additionalScore * 5;
     }
