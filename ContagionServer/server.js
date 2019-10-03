@@ -224,12 +224,14 @@ class GameState {
     //We create this at the game level to prevent multiple games from affecting others' random number generation
     if(Server.TrialMode){
       this.predeterminedAIMoves = Server.TestMoves[laplacianID];
-      this.rngThreshold = seededRNGGenerator("WaluigiTime");
+      this.rngThreshold = seededRNGGenerator("1");
       this.rngStrategy = seededRNGGenerator("Shrek II");
     }
     else{
-      this.rngThreshold = seededRNGGenerator(this.gameID+"1");
-      this.rngStrategy = seededRNGGenerator(this.gameID);
+      // this.rngThreshold = seededRNGGenerator(this.gameID+"1");
+      // this.rngStrategy = seededRNGGenerator(this.gameID);
+      this.rngThreshold = seededRNGGenerator("1");
+      this.rngStrategy = seededRNGGenerator("Shrek II");
     }
     //uses two RNGs because different strategies use different number of calls to random
     this.rngStratCount=0;
@@ -651,7 +653,7 @@ class GameState {
   GameState.prototype.aiTurn = function(aiMoves, friendlyNodeStatus, strategy){
     aiMoves = [];
     var oneNodeOnly = (this.prevAiMoves.length == 0) ? false : true; //for a previous version where there would be 5 tokens to start, then 1 token moved each time.
-    if (Server.TrialMode){
+    if (Server.TrialMode && this.isServerPlayer(friendlyNodeStatus)){
       this.aiTurnPredetermined(aiMoves, oneNodeOnly);
       return;
     }
@@ -921,7 +923,6 @@ class GameState {
 
 
   GameState.prototype.aiTurnPredetermined = function(aiMoves, oneNodeOnly){
-    console.info("WARNING: NOT UPDATED FOR EXPERIMENTAL AI");
     var peepIndex = this.predeterminedAIMoves[this.roundNumber];
     this.prevAiMoves.push(peepIndex);
     this.prevAiMoves.forEach(function(move){
