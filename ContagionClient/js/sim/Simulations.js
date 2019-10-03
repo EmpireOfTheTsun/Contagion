@@ -7,7 +7,7 @@ I have made an attempt to refactor things into the overall Simulations class, bu
 //SIM DELARED AT 167
 function Simulations(){
 	Simulations.LocalMode = true;
-	Simulations.DebugMode = false;
+	Simulations.DebugMode = true;
 	Simulations.Username = "";
 
 	function cookieManager() {
