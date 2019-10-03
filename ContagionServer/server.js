@@ -5,8 +5,8 @@ Server.TrialMode = true; //Running controlled trials with people
 Server.ExperimentMode = false; //For things like monte carlo...
 Server.NumberOfNodes = 20; //Changing this may require some refactoring...
 Server.RemoveOldNodes = false; //TODO: Update game logic (DB side done)
-Server.TestMoves = [[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
-[ 6, 5, 12, 5, 2, 17, 7, 18, 9, 9 ],
+Server.TestMoves = [//[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
+//[ 6, 5, 12, 5, 2, 17, 7, 18, 9, 9 ],
 [ 7, 12, 9, 13, 13, 1, 4, 19, 10, 19 ],
 [ 19, 14, 7, 11, 18, 9, 7, 5, 13, 1]];
 Server.playerTopologies = [];
