@@ -1,7 +1,7 @@
 //TODO: UPDATE DATABASE WITH LONGER NODES FLIPPED LENGTH
-Server.LocalMode = false; //Run on local machine or internet-facing
+Server.LocalMode = true; //Run on local machine or internet-facing
 Server.NeutralMode = true; //Supports neutral nodes (this is the default now)
-Server.TrialMode = true; //Running controlled trials with people
+Server.TrialMode = false; //Running controlled trials with people
 Server.ExperimentMode = false; //For things like monte carlo...
 Server.NumberOfNodes = 20; //Changing this may require some refactoring...
 Server.RemoveOldNodes = false; //TODO: Update game logic (DB side done)
@@ -182,7 +182,7 @@ function Server(){
   Server.RoundLimit = 10;
   Server.AiMode = true;
   Server.InfectionMode = "wowee"; //"majority" or anything else
-  Server.AiStrategy = "SimpleGreedy";//"Random";//"SimpleGreedy";//"DegreeSensitiveHigh";//"Equilibrium";//"Predetermined";//"SimpleGreedy";
+  Server.AiStrategy = "Mirror";//"Random";//"SimpleGreedy";//"DegreeSensitiveHigh";//"Equilibrium";//"Predetermined";//"SimpleGreedy";
   Server.TokenProtocol = "Incremental"; //"AtStart" or "Incremental"
   Server.AiWaiting = false;
   Server.lastAlertTime = 0;
@@ -672,8 +672,14 @@ class GameState {
       case "DegreeSensitiveHigh":
         this.aiTurnDegreeSensitive(aiMoves, oneNodeOnly, false, friendlyNodeStatus);
         break;
-      default:
+      case "Mirror":
+        this.aiTurnMirror(aiMoves, oneNodeOnly, friendlyNodeStatus);
+        break;
+      case "Random":
         this.aiTurnRandom(aiMoves, oneNodeOnly, friendlyNodeStatus);
+        break;
+      default:
+        console.err("ERROR! INVALID STRATEGY!");
         break;
     }
     if(this.isServerPlayer(friendlyNodeStatus)){
@@ -919,6 +925,25 @@ class GameState {
       }
     }
     console.error("ERROR CHOOSING FROM DISTRIBUTION!");
+  }
+
+  GameState.prototype.aiTurnMirror = function(aiMoves, oneNodeOnly, friendlyNodeStatus){
+    if (this.roundNumber == 0){
+      this.aiTurnRandom(aiMoves, oneNodeOnly, friendlyNodeStatus);
+      return;
+    }
+    var peepIndex = -1;
+    if(this.isServerPlayer(friendlyNodeStatus)){
+      peepIndex = this.playerOneMoves[this.playerOneMoves.length-1];
+      this.prevAiMoves.push(peepIndex);
+      this.prevAiMoves.forEach(function(move){
+        aiMoves.push(move);
+      });
+    }
+    else{
+      peepIndex = this.playerTwoMoves[this.playerTwoMoves.length-1];
+      aiMoves.push(peepIndex);
+    }
   }
 
 

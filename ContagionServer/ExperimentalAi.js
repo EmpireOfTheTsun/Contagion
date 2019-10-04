@@ -16,7 +16,7 @@ var winsServer = 0;
 var winsExperiment = 0;
 var resultsList = [];
 
-var strategyNames=["Random","DegreeSensitiveHigh","DegreeSensitiveLow","SimpleGreedy","Equilibrium"];
+var strategyNames=["Random","DegreeSensitiveHigh","DegreeSensitiveLow","SimpleGreedy","Equilibrium", "Mirror"];
 //var strategyNames=["SimpleGreedy"];
 
 
