@@ -6,7 +6,7 @@ var game;
 var moves = [];
 var experimentsList = [];
 var gamesRemaining = 0;
-var gamesPerExperiment = 1000;
+var gamesPerExperiment = 100;
 
 var cumScoreServer = 0;
 var cumFinalPercentageServer = 0;
@@ -16,11 +16,11 @@ var winsServer = 0;
 var winsExperiment = 0;
 var resultsList = [];
 
-EXPERIMENT_MODE = "DegreesTest";
+EXPERIMENT_MODE = "ChiTest"//"DegreesTest";//"ChiTest"
 Server.LocalMode = true;
 
 
-var strategyNames=["Random","DegreeSensitiveHigh","DegreeSensitiveLow","SimpleGreedy","Equilibrium", "Mirror"];
+var strategyNames=["Random","DSHigh","DSLow","SimpleGreedy","Equilibrium", "Mirror"];
 //var strategyNames=["SimpleGreedy"];
 
 
@@ -50,8 +50,13 @@ function setupExperiment(context){ //COULD do this without websockets. Not sure 
 
     if(EXPERIMENT_MODE == "DegreesTest"){
         for (x=0.5; x < 10.1; x+=0.5){
-            experimentsList.push([x,"DegreeSensitiveHigh"]);
-            //experimentsList.push([x,"DegreeSensitiveLow"]);
+            experimentsList.push([x,"DSHigh"]);
+            //experimentsList.push([x,"DSLow"]);
+        }
+    }
+    else if(EXPERIMENT_MODE == "ChiTest"){
+        for (x=0; x<strategyNames.length; x++){
+            experimentsList.push([x,x]);
         }
     }
     else{
@@ -95,6 +100,9 @@ function newExperiment(){
     else{
         console.log("FIN");
         console.log(resultsList);
+        if(EXPERIMENT_MODE == "ChiTest"){
+            chiSquareTest(resultsList);
+        }
     }
 }
 
@@ -141,12 +149,18 @@ function updateState(){//We are using the state already held on the server. Func
 }
 
 function gameOver(payload){//Mostly just for logging final results from this AI's POV to ensure consistency
+    moves = [];
+    game = null;
+    if(payload[0] == "draw"){
+        //We don't want to count draws in the final results, but we an always record the #draws here if needed.
+        gameStart();
+        return;
+    }
     var myScore = payload[1][9]; //9 is because it's a list of 10 vaules, one for score at each round. 9 is the last.
     var myFinalPercentage = calculateFinalPercentageInfected(payload[1]);
     var opponentScore = payload[2][9];
     var opponentFinalPercentage = calculateFinalPercentageInfected(payload[2]); //Theoretically could do 1 - myFP as assume no neutral nodes by end, but better to future-proof this.
-    moves = [];
-    game = null;
+
     cumScoreExperiment += myScore;
     cumScoreServer += opponentScore;
     cumFinalPercentageExperiment += myFinalPercentage;
@@ -205,4 +219,17 @@ function sendServerMessage(msg){
             return;
         }
     }
+}
+
+function chiSquareTest(resultsList){
+    var chiTest = require('chi-squared-test');
+    var expected = [];
+    var actual = [];
+    var degreesOfFreedom = strategyNames.length-1; 
+    for(var i = 0; i < strategyNames.length; i++){
+        actual.push(resultsList[i][1]); //Gets number of wins for that strategy
+        expected.push(gamesPerExperiment/2);
+    }
+    var probability = chiTest(actual,expected,degreesOfFreedom);
+    console.log("CHI-SQUARED RESULTS: "+probability);
 }

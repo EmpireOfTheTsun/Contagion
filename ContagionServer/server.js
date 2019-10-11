@@ -12,9 +12,10 @@ Server.TestMoves = [//[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
 Server.playerTopologies = [];
 ExponentStrength = 0.35; //Higher = more bias to high/low degree nodes in their respective strategies
 Server.ExistingTokensBias = 0; //Increases likelihood of placing tokens on nodes that already have tokens. Negative reduces the likelihood.
-//Does not affect random, equilibrium or predetermined strategies.
+//Only affects degree sensitive strategies. We decided to make this 0 to simplify analysis.
 console.info("Server starting!");
-
+var chiTest = require('chi-squared-test');
+//Shuffles lists
 shuffle = function(a) {
   for (let i = a.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -23,6 +24,7 @@ shuffle = function(a) {
   return a;
 }
 
+//Creates a permutation of the 4 layouts so users get random order
 Server.generatePerm = function(){
   var list = [0,1,2,3];
   list = shuffle(list);
@@ -182,7 +184,7 @@ function Server(){
   Server.RoundLimit = 10;
   Server.AiMode = true;
   Server.InfectionMode = "wowee"; //"majority" or anything else
-  Server.AiStrategy = "SimpleGreedy";//"Random";//"SimpleGreedy";//"DegreeSensitiveHigh";//"Equilibrium";//"Predetermined";//"SimpleGreedy";
+  Server.AiStrategy = "SimpleGreedy";//"Random";//"SimpleGreedy";//"DSHigh";//"Equilibrium";//"Predetermined";//"SimpleGreedy";
   Server.TokenProtocol = "Incremental"; //"AtStart" or "Incremental"
   Server.AiWaiting = false;
   Server.lastAlertTime = 0;
@@ -666,10 +668,10 @@ class GameState {
       case "Equilibrium":
         this.aiTurnEquilibrium(aiMoves, oneNodeOnly, friendlyNodeStatus);
         break;
-      case "DegreeSensitiveLow":
+      case "DSLow":
         this.aiTurnDegreeSensitive(aiMoves, oneNodeOnly, true, friendlyNodeStatus); //True for low degree preference
         break;
-      case "DegreeSensitiveHigh":
+      case "DSHigh":
         this.aiTurnDegreeSensitive(aiMoves, oneNodeOnly, false, friendlyNodeStatus);
         break;
       case "Mirror":
