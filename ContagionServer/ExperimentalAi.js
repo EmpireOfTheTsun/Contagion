@@ -16,6 +16,10 @@ var winsServer = 0;
 var winsExperiment = 0;
 var resultsList = [];
 
+EXPERIMENT_MODE = "DegreesTest";
+Server.LocalMode = true;
+
+
 var strategyNames=["Random","DegreeSensitiveHigh","DegreeSensitiveLow","SimpleGreedy","Equilibrium", "Mirror"];
 //var strategyNames=["SimpleGreedy"];
 
@@ -44,13 +48,20 @@ function setupExperiment(context){ //COULD do this without websockets. Not sure 
         parseEventExperiment(event);
     };
 
-    var len = strategyNames.length; //Used to make code more readable
-    for (x=0; x<len; x++){
-        for(y=x; y<len; y++){
-            experimentsList.push([x,y]);
+    if(EXPERIMENT_MODE == "DegreesTest"){
+        for (x=0.5; x < 10.1; x+=0.5){
+            experimentsList.push([x,"DegreeSensitiveHigh"]);
+            //experimentsList.push([x,"DegreeSensitiveLow"]);
         }
     }
-
+    else{
+        var len = strategyNames.length; //Used to make code more readable
+        for (x=0; x<len; x++){
+            for(y=x; y<len; y++){
+                experimentsList.push([x,y]);
+            }
+        }
+    }
     newExperiment();
 }
 
@@ -64,11 +75,21 @@ function newExperiment(){
         cumFinalPercentageExperiment = 0;
         winsServer = 0;
         winsExperiment = 0;
-        var experimentStrategies = experimentsList.shift();
-        ctx.AiStrategy = strategyNames[experimentStrategies[1]];
-        strategyType = strategyNames[experimentStrategies[0]];
-        playerID = "Exp_AI_"+strategyType;
         gamesRemaining = gamesPerExperiment;
+
+        if(EXPERIMENT_MODE == "DegreesTest"){
+            var experimentParameters = experimentsList.shift();
+            ExponentStrength = experimentParameters[0];
+            strategyType = experimentParameters[1];
+            ctx.AiStrategy = "SimpleGreedy";
+            playerID = "Exp_AI_"+strategyType+"_"+ExponentStrength;
+        }
+        else{
+            var experimentStrategies = experimentsList.shift();
+            ctx.AiStrategy = strategyNames[experimentStrategies[1]];
+            strategyType = strategyNames[experimentStrategies[0]];
+            playerID = "Exp_AI_"+strategyType;
+        }
         gameStart(); 
     }
     else{
@@ -84,7 +105,12 @@ function gameStart(){
     }
     else{
         var resultsWrapper = [];
-        resultsWrapper.push(strategyType);
+        if(EXPERIMENT_MODE == "DegreesTest"){
+            resultsWrapper.push(strategyType+ExponentStrength);
+        }
+        else{
+            resultsWrapper.push(strategyType);
+        }
         resultsWrapper.push(winsExperiment);
         var avgPercentInfectedExperiment = calculateAveragePercantageInfected(cumScoreExperiment);
         resultsWrapper.push(avgPercentInfectedExperiment);
@@ -96,6 +122,7 @@ function gameStart(){
         resultsWrapper.push(Math.round(cumFinalPercentageServer*100/gamesPerExperiment) / 100);
 
         resultsList.push(resultsWrapper);
+        console.log("F "+ExponentStrength);
         newExperiment();
     }
 

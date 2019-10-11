@@ -36,7 +36,7 @@ subscribe("preload", function(){
 	Preload([
 
 		// Music
-		{id:"bg_music", audio:"audio/bg_music.mp3"},
+		//{id:"bg_music", audio:"audio/bg_music.mp3"},
 
 		// Sound Effects
 		{id:"bonk", audio:"audio/bonk.mp3"},

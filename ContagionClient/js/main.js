@@ -65,10 +65,10 @@ subscribe("START", function(){
 	console.log("STARTO");
 	Simulations.TutorialMode = false;
 	if(Simulations.connectedToServer){
-		SOUNDS.bg_music.stop();
-		SOUNDS.bg_music.volume(0.5);
-		SOUNDS.bg_music.loop(true);
-		SOUNDS.bg_music.play();
+		//SOUNDS.bg_music.stop();
+		//SOUNDS.bg_music.volume(0.5);
+		//SOUNDS.bg_music.loop(true);
+		//SOUNDS.bg_music.play();
 
 		// Hide translations, show navigation
 		$("#navigation").style.display = "block";

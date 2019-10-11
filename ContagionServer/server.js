@@ -2,7 +2,7 @@
 Server.LocalMode = true; //Run on local machine or internet-facing
 Server.NeutralMode = true; //Supports neutral nodes (this is the default now)
 Server.TrialMode = false; //Running controlled trials with people
-Server.ExperimentMode = false; //For things like monte carlo...
+Server.ExperimentMode = true; //For things like monte carlo...
 Server.NumberOfNodes = 20; //Changing this may require some refactoring...
 Server.RemoveOldNodes = false; //TODO: Update game logic (DB side done)
 Server.TestMoves = [//[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
@@ -10,7 +10,7 @@ Server.TestMoves = [//[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
 [ 7, 12, 9, 13, 13, 1, 4, 19, 10, 19 ],
 [ 19, 14, 7, 11, 18, 9, 7, 5, 13, 1]];
 Server.playerTopologies = [];
-Server.ExponentStrength = 0.35; //Higher = more bias to high/low degree nodes in their respective strategies
+ExponentStrength = 0.35; //Higher = more bias to high/low degree nodes in their respective strategies
 Server.ExistingTokensBias = 0; //Increases likelihood of placing tokens on nodes that already have tokens. Negative reduces the likelihood.
 //Does not affect random, equilibrium or predetermined strategies.
 console.info("Server starting!");
@@ -182,7 +182,7 @@ function Server(){
   Server.RoundLimit = 10;
   Server.AiMode = true;
   Server.InfectionMode = "wowee"; //"majority" or anything else
-  Server.AiStrategy = "Mirror";//"Random";//"SimpleGreedy";//"DegreeSensitiveHigh";//"Equilibrium";//"Predetermined";//"SimpleGreedy";
+  Server.AiStrategy = "SimpleGreedy";//"Random";//"SimpleGreedy";//"DegreeSensitiveHigh";//"Equilibrium";//"Predetermined";//"SimpleGreedy";
   Server.TokenProtocol = "Incremental"; //"AtStart" or "Incremental"
   Server.AiWaiting = false;
   Server.lastAlertTime = 0;
@@ -228,10 +228,10 @@ class GameState {
       this.rngStrategy = seededRNGGenerator("Shrek II");
     }
     else{
-      // this.rngThreshold = seededRNGGenerator(this.gameID+"1");
-      // this.rngStrategy = seededRNGGenerator(this.gameID);
-      this.rngThreshold = seededRNGGenerator("1");
-      this.rngStrategy = seededRNGGenerator("Shrek II");
+      this.rngThreshold = seededRNGGenerator(this.gameID+"1");
+      this.rngStrategy = seededRNGGenerator(this.gameID);
+      // this.rngThreshold = seededRNGGenerator("1");
+      // this.rngStrategy = seededRNGGenerator("Shrek II");
     }
     //uses two RNGs because different strategies use different number of calls to random
     this.rngStratCount=0;
@@ -841,7 +841,7 @@ class GameState {
     }
 
     for (var i=0; i < 6; i++){
-      Server.ExponentStrength = 0.25 + i*0.05;
+      ExponentStrength = 0.25 + i*0.05;
       for (var j=0; j < 5; j++){
         Server.ExistingTokensBias = 0 - 0.5*j;
         var monte = clone(monteOrig);
@@ -881,10 +881,10 @@ class GameState {
         var nodeDegree = laplacian[i][i];
 
         if(lowDegreeSensitivity){
-          var nodeWeight = extMath.exp(Server.ExponentStrength*nodeDegree*-1); //negative exponent weights high degree nodes lower
+          var nodeWeight = extMath.exp(ExponentStrength*nodeDegree*-1); //negative exponent weights high degree nodes lower
         }
         else{
-          var nodeWeight = extMath.exp(Server.ExponentStrength*nodeDegree);
+          var nodeWeight = extMath.exp(ExponentStrength*nodeDegree);
         }
         nodeWeights.push(nodeWeight);
       }

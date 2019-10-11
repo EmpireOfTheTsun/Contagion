@@ -43,7 +43,7 @@ function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findW
     }
     else if (fitness == bestNodeValue){
       bestNodesID.push(i);
-    } //TODO: I should test some of this for the fake AI player!
+    }
     if (findWorst && myMoves.includes(i)){ //If we're looking for the worst token & the node inspected has a token.
       fitness = greedyFitnessChange(i, friendlyNodeStatus, tokenInfluences, false, hasFutureRounds, false); //false to show we are removing a token
       if (fitness < worstTokenValue){
@@ -132,7 +132,7 @@ function greedyFitnessChange(nodeID, friendlyNodeStatus, tokenInfluences, isAdd,
   var additionalFitness = 0;
   if (recursive){
     var isFlippedModifier = false;
-    if(ctx.formattedPeeps[nodeID][2] != friendlyNodeStatus){ //we adjust the influences for the surrounding nodes if the primary node converts to friendly
+    if(ctx.formattedPeeps[nodeID][2] == 1-friendlyNodeStatus){ //we adjust the influences for the surrounding nodes if the primary node converts to friendly
       isFlippedModifier = true;
     }
     additionalFitness = fitness; //accounts for the increase in the primary node for both rounds
@@ -141,10 +141,10 @@ function greedyFitnessChange(nodeID, friendlyNodeStatus, tokenInfluences, isAdd,
     //increments influences from neighbours
     ctx.formattedConnections.forEach(function (connection){
       if (connection[0] == nodeID){
-        additionalFitness += (fitness * greedyFitnessChange(connection[1], friendlyNodeStatus, tokenInfluences, isAdd, false, primaryFlipped));
+        additionalFitness += (fitness * greedyFitnessChange(connection[1], friendlyNodeStatus, tokenInfluences, isAdd, false, isFlippedModifier));
       }
       else if (connection[1] == nodeID){
-        additionalFitness += (fitness * greedyFitnessChange(connection[0], friendlyNodeStatus, tokenInfluences, isAdd, false, primaryFlipped));
+        additionalFitness += (fitness * greedyFitnessChange(connection[0], friendlyNodeStatus, tokenInfluences, isAdd, false, isFlippedModifier));
       }
     });
   }

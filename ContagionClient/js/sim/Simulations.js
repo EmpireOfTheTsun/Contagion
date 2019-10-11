@@ -182,7 +182,6 @@ function Simulations(){
 		console.log(ConnectorCutter.TOKEN_PROTOCOL);
 		publish("sim/connection_update");
 		Simulations.recievedConfig = config;
-		console.log(config);
 		Simulations.awaitingResponse = false;
 	}
 
