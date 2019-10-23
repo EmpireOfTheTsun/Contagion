@@ -1297,7 +1297,7 @@ Server.registerClick = function(payload, ws){
 }
 
 //Handles messages from the client
-//ws allows us to return a message to the client
+//ws parameter allows us to return a message to the client
 Server.ParseMessage = function(message, ws){
   try{
     message = JSON.parse(message);
@@ -1305,7 +1305,7 @@ Server.ParseMessage = function(message, ws){
   catch(err){
     return;
   }
-  switch(message.status){
+  switch(message.status){ //If you want to send/recieve new types of message between client/server, you can handle the delivery here
     case "SUBMIT_MOVES_TOKEN":
       Server.submitMoves(message.payload, ws);
       break;
@@ -1329,28 +1329,3 @@ Server.ParseMessage = function(message, ws){
       break;
     }
   }
-
-//Discontinued but may be useful later
-// Server.generatePerm = function(){ //This was made with 3 sets of 3 in mind but can be converted to more general without much issue
-//   var perm = [];
-//   var set1 = [0,1,2];
-//   var set2 = [3,4,5];
-//   var set3 = [6,7,8];
-//   var setSet = [set1, set2, set3];
-//   var direction = (Math.random() > 0.5? 0 : 1);
-//   var nextset = Math.floor(3 * Math.random());
-//   for (var i=0; i < 9; i++){
-//     var index = Math.floor(setSet[nextSet].length * Math.random());
-//     perm.push(setSet[nextSet].splice(index,1));
-//     if (direction == 0){
-//       nextSet++;
-//       nextSet = nextSet % 3;
-//     }
-//     else{
-//       nextSet--;
-//       if (nextSet < 0){
-//         nextSet += 3;
-//       }
-//     }
-//   }
-// }
