@@ -1,4 +1,3 @@
-//TODO: UPDATE DATABASE WITH LONGER NODES FLIPPED LENGTH
 Server.LocalMode = true; //Run on local machine or internet-facing
 Server.NeutralMode = true; //Supports neutral nodes (this is the default now)
 Server.TrialMode = false; //Running controlled trials with people
@@ -10,11 +9,10 @@ Server.TestMoves = [//[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
 [ 7, 12, 9, 13, 13, 1, 4, 19, 10, 19 ],
 [ 19, 14, 7, 11, 18, 9, 7, 5, 13, 1]];
 Server.playerTopologies = [];
-ExponentStrength = 0.35; //Higher = more bias to high/low degree nodes in their respective strategies
+ExponentStrength = 50; //Higher = more bias to high/low degree nodes in their respective strategies
 Server.ExistingTokensBias = 0; //Increases likelihood of placing tokens on nodes that already have tokens. Negative reduces the likelihood.
 //Only affects degree sensitive strategies. We decided to make this 0 to simplify analysis.
 console.info("Server starting!");
-var chiTest = require('chi-squared-test');
 //Shuffles lists
 shuffle = function(a) {
   for (let i = a.length - 1; i > 0; i--) {
@@ -40,6 +38,7 @@ Server.generatePerm = function(){
 //Cookies are a potential route for tracking players, but legal issues.
 const uuidv4 = require('uuid/v4');
 const WebSocketServer = require('ws').Server;
+const Message = require('./Message.js');
 var http = require("http");
 var express = require("express");
 var nodemailer = require('nodemailer');
@@ -59,6 +58,7 @@ var transporter = nodemailer.createTransport({
   }
 });
 
+//This is all to do with connecting the client & server. This is largely boilerplate code that we shouldn't touch
 var server = http.createServer(app);
 server.listen(PORT);
 
@@ -74,8 +74,8 @@ if(!Server.LocalMode){
   client.connect();
 }
 
-var clone = require('clone');
-module.exports = {
+var clone = require('clone'); //Allows deep cloning of objects (for parallel games with shared starting resources)
+module.exports = { //Allows other files to use the initialiseTopologyLayoutIndexes function
   initialiseTopologyLayoutIndexes: function() {
     Server.initialiseTopologyLayoutIndexes();
   },
@@ -84,13 +84,16 @@ module.exports = {
   NumberOfNodes: Server.NumberOfNodes
 
 };
+//Similarly to above, lets other files use these variables
 module.exports.NeutralMode = Server.NeutralMode;
 module.exports.LocalMode = Server.LocalMode;
 
+//Lets us access the config data processed in the NetworkConfigurations file
 configData = require('./NetworkConfigurations.js');
 serverConfigs = configData.configs;
 laplaciansList = configData.laplacians;
 
+//Handles waiting until the server has finished loading
 Server.LoadExperiment = function(times){
   if(times > 100){
     console.error("Error Initialising!");
@@ -108,10 +111,9 @@ if(Server.ExperimentMode){
   Server.LoadExperiment(0);
 }
 
-const Message = require('./Message.js');
-
+//Handles storing of game data to database
 Server.sendSqlQuery = function(query, game){
-  if (!Server.LocalMode && !Server.ExperimentMode){
+  if (!Server.LocalMode && !Server.ExperimentMode){//Doesn't use the database if we're running a local build or running a local experiment
     console.info(query);
     try{
       client.query(query, function(err, result){
@@ -126,6 +128,7 @@ Server.sendSqlQuery = function(query, game){
   }
 }
 
+//Emails us if there's a problem with the DB
 Server.databaseFailure = function(err, game, query){
   console.error(err);
 
@@ -184,7 +187,7 @@ function Server(){
   Server.RoundLimit = 10;
   Server.AiMode = true;
   Server.InfectionMode = "wowee"; //"majority" or anything else
-  Server.AiStrategy = "SimpleGreedy";//"Random";//"SimpleGreedy";//"DSHigh";//"Equilibrium";//"Predetermined";//"SimpleGreedy";
+  Server.AiStrategy = "DSHigh";//"SimpleGreedy";//"Random";//"SimpleGreedy";//"DSHigh";//"Equilibrium";//"Predetermined";//"SimpleGreedy";"
   Server.TokenProtocol = "Incremental"; //"AtStart" or "Incremental"
   Server.AiWaiting = false;
   Server.lastAlertTime = 0;
@@ -663,7 +666,18 @@ class GameState {
       case "SimpleGreedy":
         var aiTurnSimpleGreedy = require('./MyopicGreedy.js');
         var ctx = this;
-        aiTurnSimpleGreedy(aiMoves, false, ctx, friendlyNodeStatus); //don't need to remove worst token, so just false
+        aiTurnSimpleGreedy(aiMoves, false, ctx, friendlyNodeStatus, ""); //don't need to remove worst token, so just false
+        break;
+      case "GreedyPredictsHigh":
+          var aiTurnSimpleGreedy = require('./MyopicGreedy.js');
+          var ctx = this;
+          var laplacian = clone(laplaciansList[this.laplacianID]);
+          aiTurnSimpleGreedy(aiMoves, false, ctx, friendlyNodeStatus, "High", laplacian);
+        break;
+      case "GreedyPredictsGreedy":
+          var aiTurnSimpleGreedy = require('./MyopicGreedy.js');
+          var ctx = this;
+          aiTurnSimpleGreedy(aiMoves, false, ctx, friendlyNodeStatus, "Greedy"); //don't need to remove worst token, so just false
         break;
       case "Equilibrium":
         this.aiTurnEquilibrium(aiMoves, oneNodeOnly, friendlyNodeStatus);

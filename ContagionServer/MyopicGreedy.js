@@ -1,6 +1,6 @@
 //Greedy strategy, i.e. maximising expected increase in opinions spread for the next turn
 var ctx;
-function aiTurnSimpleGreedy(aiMoves, removeOld, context, friendlyNodeStatus){
+function aiTurnSimpleGreedy(aiMoves, removeOld, context, friendlyNodeStatus, anticipating, laplacian){
   ctx = context;
   if(ctx.isServerPlayer(friendlyNodeStatus)){
     var myMoves = ctx.prevAiMoves;
@@ -9,6 +9,15 @@ function aiTurnSimpleGreedy(aiMoves, removeOld, context, friendlyNodeStatus){
   else{
     var myMoves = ctx.playerOneMoves;
     var enemyMoves = ctx.prevAiMoves;
+  }
+  if(anticipating.length > 0){
+    if(anticipating == "High"){
+      var highestDegree = getHighestDegreeNode(laplacian);
+      enemyMoves.push(highestDegree);
+    }
+    else if (anticipating == "Greedy"){
+      console.log("Not implemented yet!");
+    }
   }
   //We know at the point one player is AI, this retrieves their previous moves.
   //array of [AI(friendly from this POV), Player(enemy)] moves
@@ -122,6 +131,9 @@ function createTokenInfluencesList(friendlyNodeStatus, myMoves, enemyMoves){
     friendlySources[token]++;
     enemySources[enemyToken]++;
   }
+  if(myMoves.length < enemyMoves.length){ //When anticipating enemy moves, they have one more 'move', so we account for it here.
+    enemySources[enemyMoves[enemyMoves.length-1]]++;
+  }
 
   return [friendlySources, enemySources];
 }
@@ -173,5 +185,21 @@ function fitnessChangeCalculation(nodeID, isAdd, tokenInfluences, primaryFlipped
   //console.log("F"+finalFitness+"_"+initialFitness);
   return finalFitness - initialFitness;
 }
+
+function getHighestDegreeNode(laplacian){
+  var best = -1;
+  var bestIndex = [-1];
+  for(var i=0; i<20; i++){
+    if(laplacian[i][i] > best){
+      bestIndex = [i];
+      best = laplacian[i][i];
+    }
+    else if(laplacian[i][i] >= best){
+      bestIndex.push[i];
+    }    
+  }
+  return bestIndex[Math.floor(Math.random() * bestIndex.length)];
+}
+
 
 module.exports = aiTurnSimpleGreedy;

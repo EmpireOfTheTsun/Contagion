@@ -6,7 +6,7 @@ var game;
 var moves = [];
 var experimentsList = [];
 var gamesRemaining = 0;
-var gamesPerExperiment = 100;
+var gamesPerExperiment = 10000;
 
 var cumScoreServer = 0;
 var cumFinalPercentageServer = 0;
@@ -16,11 +16,11 @@ var winsServer = 0;
 var winsExperiment = 0;
 var resultsList = [];
 
-EXPERIMENT_MODE = "ChiTest"//"DegreesTest";//"ChiTest"
+EXPERIMENT_MODE = "Bees";//"DegreesTest"//"DegreesTest";//"ChiTest"
 Server.LocalMode = true;
 
 
-var strategyNames=["Random","DSHigh","DSLow","SimpleGreedy","Equilibrium", "Mirror"];
+var strategyNames=["GreedyPredictsHigh", "DSHigh"]; //["Random","DSHigh","DSLow","SimpleGreedy","Equilibrium", "Mirror"];
 //var strategyNames=["SimpleGreedy"];
 
 
@@ -49,9 +49,9 @@ function setupExperiment(context){ //COULD do this without websockets. Not sure 
     };
 
     if(EXPERIMENT_MODE == "DegreesTest"){
-        for (x=0.5; x < 10.1; x+=0.5){
+        for (x=0.5; x < 2.09; x+=0.05){
             experimentsList.push([x,"DSHigh"]);
-            //experimentsList.push([x,"DSLow"]);
+            experimentsList.push([x,"DSLow"]);
         }
     }
     else if(EXPERIMENT_MODE == "ChiTest"){
@@ -225,11 +225,13 @@ function chiSquareTest(resultsList){
     var chiTest = require('chi-squared-test');
     var expected = [];
     var actual = [];
-    var degreesOfFreedom = strategyNames.length-1; 
+    var degreesOfFreedomReduction = 1; //reduces degrees of freedom by 1 as knowing n-1 strategies determines the nth strat.
     for(var i = 0; i < strategyNames.length; i++){
         actual.push(resultsList[i][1]); //Gets number of wins for that strategy
         expected.push(gamesPerExperiment/2);
     }
-    var probability = chiTest(actual,expected,degreesOfFreedom);
-    console.log("CHI-SQUARED RESULTS: "+probability);
+    var probability = chiTest(actual,expected,degreesOfFreedomReduction);
+    console.log("CHI-SQUARED RESULTS:");
+    console.log(probability);
+    console.log("END");
 }
