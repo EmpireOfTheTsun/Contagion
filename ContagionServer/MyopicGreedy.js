@@ -12,8 +12,13 @@ function aiTurnSimpleGreedy(aiMoves, removeOld, context, friendlyNodeStatus, ant
   }
   if(anticipating.length > 0){
     if(anticipating == "High"){
-      var highestDegree = getHighestDegreeNode(laplacian);
-      enemyMoves.push(highestDegree);
+      if(ctx.roundNumber == 0){
+        anticipating = "";
+      }
+      else{
+        var highestDegree = getHighestDegreeNode(laplacian);
+        enemyMoves.push(highestDegree);
+      }
     }
     else if (anticipating == "Greedy"){
       console.log("Not implemented yet!");
@@ -29,6 +34,9 @@ function aiTurnSimpleGreedy(aiMoves, removeOld, context, friendlyNodeStatus, ant
   }
   else{
     greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, false, myMoves); //false to just add best
+  }
+  if(anticipating.length > 0){
+    enemyMoves.pop();
   }
 } 
 

@@ -64,6 +64,7 @@ server.listen(PORT);
 
 const wss = new WebSocketServer({ server: server });
 var client = null;
+//Doesn't log to database when local, as local is usually for testing. 
 if(!Server.LocalMode){
   const { Client } = require('pg');
   client = new Client({
@@ -79,7 +80,7 @@ module.exports = { //Allows other files to use the initialiseTopologyLayoutIndex
   initialiseTopologyLayoutIndexes: function() {
     Server.initialiseTopologyLayoutIndexes();
   },
-  NeutralMode: Server.NeutralMode,
+  NeutralMode: Server.NeutralMode, //Allows other files to access these variables
   LocalMode: Server.LocalMode,
   NumberOfNodes: Server.NumberOfNodes
 
@@ -99,6 +100,7 @@ Server.LoadExperiment = function(times){
     console.error("Error Initialising!");
     return;
   }
+  //When this has a non-zero value, loading complete
   if(configData.laplacians.length != 0){
     var experimentAi = require('./ExperimentalAi.js');
     setTimeout(() => {experimentAi.setupExperiment(this);}, 1500);//Debugger needs time to attach
@@ -113,11 +115,12 @@ if(Server.ExperimentMode){
 
 //Handles storing of game data to database
 Server.sendSqlQuery = function(query, game){
-  if (!Server.LocalMode && !Server.ExperimentMode){//Doesn't use the database if we're running a local build or running a local experiment
+  if (!Server.LocalMode && !Server.ExperimentMode){//Doesn't use the database if we're running locally/experiments
     console.info(query);
     try{
       client.query(query, function(err, result){
         if (err){
+          //Sends email if failure adding to db
           Server.databaseFailure(err, game, query);
         }
       });
@@ -150,12 +153,13 @@ Server.databaseFailure = function(err, game, query){
   game.killGame(false, game);
 }
 
+//Sends an email to the contagion account for critical information.
 Server.sendMail = function(emailSubject, errtext){
   var fullText = "Error: "+errtext;
 
   var mailOptions = {
     from: 'contagiongamesoton@gmail.com',
-    to: 'lh9g14@soton.ac.uk',
+    to: 'contagiongamesoton@gmail.com', //Can be changed to whoever. May be better to setup forwarding on this account.
     subject: emailSubject,
     text: fullText
   };
@@ -170,73 +174,75 @@ Server.sendMail = function(emailSubject, errtext){
 
 }
 
+//Initialises a list containing the next layout to be used for each topology, so new players get different layouts
+//N.B. This is not used for returning players - they will play new layouts/topologies based on their last played game
 Server.initialiseTopologyLayoutIndexes = function(){
   var topologyLayoutIndexes = [];
-  for (var i=0; i<serverConfigs.length; i++){
+  for (var i=0; i<serverConfigs.length; i++){//If 2 topologies, will be length 2 (layouts do not count)
     topologyLayoutIndexes.push(0);
   }
 
   Server.CurrentTopologyLayoutIndexes = topologyLayoutIndexes;
-  Server.CurrentTopologyIndex = 0;
+  Server.CurrentTopologyIndex = 0; //Similarly to how the list tracks layouts, this variable tracks the next topology to be used
 }
 
+//Initialises most server-wide variables (some frequenly changing ones are declared at the top of the file)
 function Server(){
-  Server.MAX_TOKENS = 5;
+  Server.MAX_TOKENS = 5; //Used in game modes where players have all tokens at once but can move them.
   Server.CurrentGames = [];
-  Server.WaitingGameConfig = null;
+  Server.WaitingGameConfig = null; //Used to give a 2nd human player the same config as p1.
   Server.RoundLimit = 10;
-  Server.AiMode = true;
-  Server.InfectionMode = "wowee"; //"majority" or anything else
-  Server.AiStrategy = "DSHigh";//"SimpleGreedy";//"Random";//"SimpleGreedy";//"DSHigh";//"Equilibrium";//"Predetermined";//"SimpleGreedy";"
-  Server.TokenProtocol = "Incremental"; //"AtStart" or "Incremental"
-  Server.AiWaiting = false;
-  Server.lastAlertTime = 0;
-  Server.demoMode = true;
-  Server.heartbeatCheckFrequency = 100;
-  Server.heartAttackTime = 800;
+  Server.AiMode = true; //Always sets player 2 to AI
+  Server.InfectionMode = "wowee"; //"majority" to only infect if >50% sources infected, or anything else for voter model.
+  Server.AiStrategy = "DSHigh";// See 'aiTurn' method for each string
+  Server.TokenProtocol = "Incremental"; //"AtStart" to get all tokens at start or "Incremental" for one per round
+  Server.AiWaiting = false; //Implements a fake waiting to convince players they are playing against a human
+  Server.lastAlertTime = 0; //Records time since last email alert to prevent spam
+  Server.demoMode = true; //Prevents timeouts if players take too long
+  Server.heartbeatCheckFrequency = 100; //Checks heartbeats from players every X milliseconds
+  Server.heartAttackTime = 800; //If no response in X milliseconds, kills game (other player wins)
 }
 
 Server();
 
 class GameState {
   constructor(peeps, connections, playerOneLayoutID, playerTwoLayoutID, laplacianID, ws) {
-    this.gameID = uuidv4();
-    this.playerOne = ws;
+    this.gameID = uuidv4(); //Unique identifier for game, used in db
+    this.playerOne = ws; //Stores player by their connection object
     this.playerOne.id = ws.id;
     this.playerOneScore = 0;
     this.playerTwo = null;
-    this.formattedPeeps = peeps;
+    this.formattedPeeps = peeps; 
     this.formattedConnections = connections;
-    this.playerOneLayoutID = playerOneLayoutID;
+    this.playerOneLayoutID = playerOneLayoutID; //Allows different players to be given different layouts
     this.playerTwoLayoutID = playerTwoLayoutID;
     this.playerOneMoves = [];
     this.playerTwoMoves = [];
     this.roundNumber = 0;
-    this.flippedNodes = [];
+    this.flippedNodes = []; //Records all nodes that have changed since last round
     this.playerOneTime = -1; //Starts just before sending config or updated state, ends as we identify whose moves we recieved.
     this.playerTwoTime = -1;
     this.playerTwoTimeOffset = 10000000000 //large value for debug, should only appear if something has gone wrong.
-    this.playerOneLastHeartbeat = Date.now();
+    this.playerOneLastHeartbeat = Date.now(); //uses now() as this is created when the first player joins
     this.playerTwoLastHeartbeat = -1;
-    this.timer = setInterval(this.heartbeatHandler, Server.heartbeatCheckFrequency, this);
-    this.prevAiMoves = [];
+    this.timer = setInterval(this.heartbeatHandler, Server.heartbeatCheckFrequency, this); //Checks heartbeats
+    this.prevAiMoves = []; //Stores ai's previous moves - used to prevent some headaches with some ai types. Usually equal to playerTwoMoves
     this.gameStartTime = Date.now();
-    this.aiCheckTimer = null;
-    this.playerOneScoreList = [];
+    this.aiCheckTimer = null; //Special timer for adding an AI if a player 2 doesn't appear
+    this.playerOneScoreList = []; //Records score per round
     this.playerTwoScoreList = [];
-    this.laplacianID = laplacianID;
+    this.laplacianID = laplacianID; //Stores index of the laplacian used in this game for easy retrieval
+
     //created rng with random seedword to make it deterministic
     //We create this at the game level to prevent multiple games from affecting others' random number generation
     if(Server.TrialMode){
       this.predeterminedAIMoves = Server.TestMoves[laplacianID];
-      this.rngThreshold = seededRNGGenerator("1");
+      this.rngThreshold = seededRNGGenerator("1"); //These seeds have only a small bias - difficult to eliminate due to variances in topology.
       this.rngStrategy = seededRNGGenerator("Shrek II");
     }
     else{
       this.rngThreshold = seededRNGGenerator(this.gameID+"1");
       this.rngStrategy = seededRNGGenerator(this.gameID);
-      // this.rngThreshold = seededRNGGenerator("1");
-      // this.rngStrategy = seededRNGGenerator("Shrek II");
     }
     //uses two RNGs because different strategies use different number of calls to random
     this.rngStratCount=0;
@@ -245,6 +251,7 @@ class GameState {
 
 }
 
+//Records game data and sends it as a query to the database
   GameState.prototype.addGameToDatabase = function(query){
     var timestamp = new Date();
     timestamp = timestamp.toISOString().slice(0, -1); //removes the Z from the timestamp. Not strictly necessary as the DB will truncate, but this avoids a warning being produced.
@@ -258,6 +265,7 @@ class GameState {
     var p1id = (this.playerOne != null && this.playerOne != "AI") ? this.playerOne.id : "AI";
     var p2id = (this.playerTwo != null && this.playerTwo != "AI") ? this.playerTwo.id : "AI";
     if (p2id == "AI"){
+      //Renames some AI's attributes to be more descriptive in the database
       p2id += Server.AiStrategy;
       this.playerTwoLayoutID = this.playerOneLayoutID;
     }
@@ -265,7 +273,7 @@ class GameState {
     Server.sendSqlQuery(query, this);
   }
 
-  //updates the state if P1 or P2 changes
+  //updates the database game record if P1 or P2 changes
   GameState.prototype.updateGameDatabaseEntry = function(){
     var p1id = (this.playerOne != null && this.playerOne != "AI") ? this.playerOne.id : "AI";
     var p2id = (this.playerTwo != null && this.playerTwo != "AI") ? this.playerTwo.id : "AI";
@@ -273,13 +281,16 @@ class GameState {
     Server.sendSqlQuery(query, this);
   }
 
+  //Adds a new row in player_actions_table to record the actions taken this round
   GameState.prototype.addMovesToDatabase = function(){
     var flippedString = "";
+    //Builds a string from the node IDs that have changed colour this round
     this.flippedNodes.forEach(function(nodeIndex){
       flippedString = flippedString + nodeIndex + "_";
     });
     flippedString = flippedString.slice(0, -1); //removes trailing underscore
 
+    //Similarly, builds a string from the tokens p1 (and p2 below) have placed
     var p1MovesString = "";
     this.playerOneMoves.forEach(function (move){
       p1MovesString = p1MovesString + move + "_";
@@ -295,6 +306,7 @@ class GameState {
     var p1Nodes = [];
     var p2Nodes = [];
 
+    //For a more human-readable entry, we record which nodes either player owns after infection
     this.formattedPeeps.forEach(function(peep, index){
         if (peep[2] == 1){
           p1Nodes.push(index);
@@ -306,22 +318,30 @@ class GameState {
 
     var query = `INSERT INTO player_actions_table VALUES ('${this.gameID}', ${this.roundNumber}, '${this.flippedNodes}', '${this.playerOneMoves}' ,'${this.playerTwoMoves}', ${this.playerOneTime}, ${this.playerTwoTime}, '${p1Nodes}', '${p2Nodes}');`;
     Server.sendSqlQuery(query, this);
+    //Resets flipped nodes for next round
     this.flippedNodes = [];
   }
 
+  //Takes moves submitted by a player and stores them
+  //Also moves the game on if possible (i.e.starts ai's turn, or begins infection process)
   GameState.prototype.addPlayerMoves = function(moves, isPlayerOne, opponentReady){
     //Performs AI moves before recording new player moves (to prevent bias)
     this.aiCheck();
+    //Sets either the server's recording of p1 moves or p2 moves depending o who sent it
     isPlayerOne ? (this.playerOneMoves = moves) : (this.playerTwoMoves = moves);
+    //If p2 has submitted moves OR is against ai
     if (opponentReady){
+      //Simulates a real opponent to the human player by sometimes waiting before making a move
       if (Server.AiWaiting == true && (this.playerTwo == "AI" || this.playerOne == "AI")){
         this.fakeAiWait();
       }
       else{
+        //Begins infection process
         this.newTurn();
       }
     }
     else{
+      //Lets player know they must wait for p2's moves
       var recipient = isPlayerOne ? this.playerOne : this.playerTwo;
       Server.sendClientMessage(new Message(null, "DEFERRED_STATE_TOKEN"), recipient);
     }
@@ -338,12 +358,16 @@ class GameState {
     }
     //Simulates the other player having submitted before you
     else{
+      //Begins infection phase
       this.newTurn();
     }
   }
 
+  //Is called when player 1 submits moves - calls the generic addPlayerMoves, plus extra logic to handle waiting for opponent or hot-swapping AI
   GameState.prototype.addPlayerOneMoves = function(moves){
+    //Will not fail the player for taking too long this round
     clearTimeout(this.playerOneTimer);
+    //Records when the move was made in milliseconds, where 0 is start of the game
     this.playerOneTime = Date.now() - this.gameStartTime;
     this.addPlayerMoves(moves, true, (this.playerTwo == "AI" || this.playerTwoMoves.length > 0));
     if (this.roundNumber == 0){
@@ -360,6 +384,7 @@ class GameState {
     }
   }
 
+  //Lets player one know how long player two has left to submit
   GameState.prototype.addPlayerOneTimer = function(duration){
     if(duration < 1){
       duration = 1;
@@ -368,13 +393,14 @@ class GameState {
     Server.sendClientMessage(new Message([1, duration-1], "TIMER_TOKEN"), game.playerOne);
   }
 
+  //Similar to addPlayerOneMoves, extra logic is not needed here as any extra waiting logic implemented there.
   GameState.prototype.addPlayerTwoMoves = function(moves){
     clearTimeout(this.playerTwoTimer);
     this.playerTwoTime = (Date.now() - this.gameStartTime) - this.playerTwoTimeOffset;
     this.addPlayerMoves(moves, false, (this.playerOne == "AI" || this.playerOneMoves.length > 0));
   }
 
-  //returns the AI player's moves if is present, else false.
+  //returns the AI player's moves if the game is using an AI
   //returns null if the game is run only by AI, and should be shut down.
   GameState.prototype.aiCheck = function(){
     var oneAI = this.playerOne == "AI";
@@ -392,12 +418,16 @@ class GameState {
     //no AI players, so do nothing
   }
 
+  //Checks the game to ensure that both players remain connected
+  //Kills the game and causes the disconnector to lose if doesn't respond in time
   GameState.prototype.heartbeatHandler = function(game){
     var now = Date.now();
     if (!Server.demoMode && !Server.ExperimentMode){
+      //Kills game if time since last heartbeat is longer than acceptable
       if (now - game.playerOneLastHeartbeat > Server.heartAttackTime){
         console.error("Heart attack1!");
         try{
+          //Lets other player know of disconnect
           Server.sendResults(2, game, "disconnect");
         }
         catch(e){
@@ -405,6 +435,7 @@ class GameState {
         }
         game.killGame(false, game);
       }
+      //Does same for other player
       if(game.playerTwo !== "AI" && game.playerTwo !== null && now-game.playerTwoLastHeartbeat > Server.heartAttackTime){
         console.error("Heart attack2!");
         try{
@@ -418,13 +449,15 @@ class GameState {
     }
   }
 
+  //Stores player clicks in the database
   GameState.prototype.registerClick = function(playerID, nodeID, action){
+    //milliseconds since game start
     var timestamp = Date.now() - this.gameStartTime;
     var query = `INSERT INTO player_clicks_table VALUES ('${this.gameID}', '${playerID}', '${nodeID}', '${action}', '${timestamp}', '${this.roundNumber}');`;
     Server.sendSqlQuery(query, this);
   }
 
-
+  //Removes game from the server's list of active games
   GameState.prototype.removeGame = async(game) => {
     var index = Server.CurrentGames.indexOf(game);
     Server.CurrentGames.splice(index, 1);
@@ -432,16 +465,14 @@ class GameState {
 
   //naturalEnd is true when the game ends by reaching the max number of rounds.
   GameState.prototype.killGame = function(naturalEnd, game, causer){
-    // console.log("game over");
-    // console.log(game.playerOneMoves);
-    // console.log(game.playerTwoMoves);
     if(causer != null){
       try{
+        //if p1 caused the game end by disconnecting
         if (causer == "p1"){
           Server.sendResults(2, game, "disconnect");
         }
         else if(causer == "p2"){
-          Server.sendResults(2, game, "disconnect");
+          Server.sendResults(1, game, "disconnect");
         }
       }
       catch(err){} //Suppresses error if other player is an AI
@@ -452,6 +483,7 @@ class GameState {
     }
     if (naturalEnd){
       //send score, etc.
+      //Determines who is the winner/loser and sends their score along with win/lose status
       if (game.playerTwo == "AI"){
         if (game.playerOneScore > game.playerTwoScore){
           Server.sendResults(1, game, "win");
@@ -479,19 +511,25 @@ class GameState {
       }
 
     }
+    //Clears any game-ending timers that are still operating
     clearInterval(game.timer);
     clearTimeout(game.playerOneTimer);
     clearTimeout(game.playerTwoTimer);
 
+    //Removes this game from list of active games
     this.removeGame(game);
   }
 
+  //After getting moves from both players
+  //Runs infection logic, updates database, updates player scores & sends players the new state.
   GameState.prototype.newTurn = function(){
     this.roundNumber++;
     this.performInfections();
     this.addMovesToDatabase();
     this.updateScores();
     this.updateClients();
+
+    //Ends game if #rounds over
     if (this.roundNumber >= Server.RoundLimit){
       this.killGame(true, this);
     }
@@ -506,9 +544,12 @@ class GameState {
     }
   }
 
+  //Calculates players' scores based on previous round + nodes infected this round
   GameState.prototype.updateScores = function(){
     var playerOnePeepsCount = 0;
     var playerTwoPeepsCount = 0;
+
+    //Records how many nodes owned by each player
     this.formattedPeeps.forEach(function(peep){
       if (peep[2] == 1){
         playerOnePeepsCount++;
@@ -517,12 +558,14 @@ class GameState {
         playerTwoPeepsCount++;
       }
     });
+    //Each node worth 10 points
     var p1additionalScore = playerOnePeepsCount * 10;
     var p2additionalScore = playerTwoPeepsCount * 10;
 
-    if(this.roundNumber == 10 && !Server.ExperimentMode){
-      p1additionalScore = p1additionalScore * 5;
-      p2additionalScore = p2additionalScore * 5;
+    //Applies 5x bonus to the final round
+    if(this.roundNumber == 10){
+      p1additionalScore = p1additionalScore * 10;
+      p2additionalScore = p2additionalScore * 10;
     }
 
     this.playerOneScore += p1additionalScore;

@@ -16,11 +16,11 @@ var winsServer = 0;
 var winsExperiment = 0;
 var resultsList = [];
 
-EXPERIMENT_MODE = "Bees";//"DegreesTest"//"DegreesTest";//"ChiTest"
+EXPERIMENT_MODE = "NoReflexive";//"DegreesTest"//"DegreesTest";//"ChiTest"
 Server.LocalMode = true;
 
 
-var strategyNames=["GreedyPredictsHigh", "DSHigh"]; //["Random","DSHigh","DSLow","SimpleGreedy","Equilibrium", "Mirror"];
+var strategyNames=["GreedyPredictsHigh", "DSHigh", "SimpleGreedy"]; //["Random","DSHigh","DSLow","SimpleGreedy","Equilibrium", "Mirror"];
 //var strategyNames=["SimpleGreedy"];
 
 
@@ -57,6 +57,16 @@ function setupExperiment(context){ //COULD do this without websockets. Not sure 
     else if(EXPERIMENT_MODE == "ChiTest"){
         for (x=0; x<strategyNames.length; x++){
             experimentsList.push([x,x]);
+        }
+    }
+    else if(EXPERIMENT_MODE == "NoReflexive"){
+        var len = strategyNames.length; //Used to make code more readable
+        for (x=0; x<len; x++){
+            for(y=x; y<len; y++){
+                if(y != x){
+                    experimentsList.push([x,y]);
+                }
+            }
         }
     }
     else{
