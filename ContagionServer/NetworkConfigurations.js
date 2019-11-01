@@ -156,35 +156,7 @@ function shuffle(a) {
     }
     return a;
 }
-//
-// //2D array class, from https://stackoverflow.com/a/26562086
-// //This is a nice implementation that's easy to code with. Modified with increment and decrement
-// function Array2D(xSize, ySize, initialValue) {
-//   initialValue=initialValue || 0;
-//   // create an flat empty array filled with the initial value
-//   var length = xSize*ySize;
-//   var innerArray = new Array(length);
-//   for (var i=0; i<length; i++) innerArray[i] = initialValue;
-//   // accessors
-//   this.getAt = function(x, y) { return innerArray[x+xSize*y]};
-//   this.setAt = function(x, y, val) { innerArray[x+xSize*y]=val};
-// 	this.increment = function(x,y) {innerArray[x+xSize*y]++};
-// 	this.decrement = function(x,y) {innerArray[x+xSize*y]--};
-// 	this.addValue = function(x,y,val) {this.setAt(x,y,(this.getAt(x,y)+val))};
-// 	this.print = function() {
-// 		var formattedArray = [];
-// 		for (var i=0; i<ySize; i++){
-// 			var arr = [];
-// 			for (var j=0; j<xSize; j++){
-// 				arr.push(this.getAt(i,j));
-// 			}
-// 			formattedArray.push(arr);
-// 		}
-// 		//console.log(formattedArray);
-// 		//console.log(innerArray);
-// 		//console.log(innerArray.length);
-// 	};
-// }
+
 loadConfigs();
 
 module.exports.configs = NETWORK_CONFIGS;
