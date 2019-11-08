@@ -393,7 +393,7 @@ class GameState {
     Server.sendClientMessage(new Message([1, duration-1], "TIMER_TOKEN"), game.playerOne);
   }
 
-  //Similar to addPlayerOneMoves, extra logic is not needed here as any extra waiting logic implemented there.
+  //Similar to addPlayerOneMoves, extra logic is not needed here as any extra waiting logic implemented elsewhere.
   GameState.prototype.addPlayerTwoMoves = function(moves){
     clearTimeout(this.playerTwoTimer);
     this.playerTwoTime = (Date.now() - this.gameStartTime) - this.playerTwoTimeOffset;
@@ -661,7 +661,7 @@ class GameState {
       //prevents / by 0 error for peeps surrounded by neutral peeps
       if (peep[4] > 0){
         var ratio = peep[3]/peep[4];
-        if(Server.InfectionMode == "majority"){
+        if(Server.InfectionMode == "majority"){ //For the majority model (i.e. only change colour if one side has more sources of influence)
           //If more friendly sources than enemy
           if (ratio > 0.5){
             peep[2] = 1;
@@ -682,11 +682,12 @@ class GameState {
       }
     });
 
+    //Updates the record of which nodes have changed colour this round
     var flippedNodes = this.flippedNodes;
     originalPeeps.forEach(function(peep, index){
-      if (peep[2] != updatedPeeps[index][2]){
+      if (peep[2] != updatedPeeps[index][2]){ //Using != also allows us to capture neutral node changes
         if (updatedPeeps[index][2] == 1){
-          flippedNodes.push(index+"p");
+          flippedNodes.push(index+"p"); //Indicates changes to player nodes
         }
         else{
           flippedNodes.push(index);
@@ -698,18 +699,23 @@ class GameState {
 
   }
 
+  //Handles logic regarding ai strategies
   GameState.prototype.aiTurn = function(aiMoves, friendlyNodeStatus, strategy){
-    aiMoves = [];
-    var oneNodeOnly = (this.prevAiMoves.length == 0) ? false : true; //for a previous version where there would be 5 tokens to start, then 1 token moved each time.
+    aiMoves = []; //Will contain the chosen moves
+    //for a previous version where there would be 5 tokens to start, then 1 token moved each time.
+    var oneNodeOnly = (this.prevAiMoves.length == 0) ? false : true;
     if (Server.TrialMode && this.isServerPlayer(friendlyNodeStatus)){
+      //Uses the preset moves if running a trial (and is not representing a human player during AI vs AI experiments)
       this.aiTurnPredetermined(aiMoves, oneNodeOnly);
       return;
     }
     switch(strategy){
+      //Has one case for each strategy type
       case "SimpleGreedy":
-        var aiTurnSimpleGreedy = require('./MyopicGreedy.js');
-        var ctx = this;
-        aiTurnSimpleGreedy(aiMoves, false, ctx, friendlyNodeStatus, ""); //don't need to remove worst token, so just false
+        var aiTurnSimpleGreedy = require('./MyopicGreedy.js');//Calls the external file
+        var ctx = this; //Allows the external file to access the same resources as from here
+        //don't need to remove worst token, so 2nd param false. No anticipation so 5th param ""
+        aiTurnSimpleGreedy(aiMoves, false, ctx, friendlyNodeStatus, ""); 
         break;
       case "GreedyPredictsHigh":
           var aiTurnSimpleGreedy = require('./MyopicGreedy.js');
@@ -742,7 +748,7 @@ class GameState {
         break;
     }
     if(this.isServerPlayer(friendlyNodeStatus)){
-      this.playerTwoMoves = aiMoves;
+      this.playerTwoMoves = aiMoves; //Allows server to add moves for either player
     }
     else{
       return aiMoves[0];
@@ -764,7 +770,9 @@ class GameState {
   GameState.prototype.aiTurnRandom = function(aiMoves, oneNodeOnly, friendlyNodeStatus){
     //adds one token when the token protocol is incremental
     if(Server.TokenProtocol == "Incremental"){
+      //Selects random node from the list of nodes.
       var peepIndex = Math.floor(Math.random()*this.formattedPeeps.length);
+      //Performs logic to add the chosen move to either player
       if(this.isServerPlayer(friendlyNodeStatus)){
         this.prevAiMoves.push(peepIndex);
         this.prevAiMoves.forEach(function(move){
@@ -777,56 +785,61 @@ class GameState {
       return;
     }
     else{
-      console.log("Temporarily disabling other options.");
+      console.log("Temporarily disabling other options."); //Change here if you wish to re-enable other game modes
       return;
     }
-    if (!oneNodeOnly){
-      for(i=0 ; i < Server.MAX_TOKENS; i++){
-          var peepIndex = Math.floor(Math.random()*this.formattedPeeps.length);
-          aiMoves.push(peepIndex);
-          if(this.isServerPlayer(friendlyNodeStatus)){
-            this.prevAiMoves.push(peepIndex);
-          }
-      }
-    }
-    else{
-      var index = Math.floor(Math.random()*Server.MAX_TOKENS);
-      var peepIndex = Math.floor(Math.random()*this.formattedPeeps.length);
-      if(this.isServerPlayer(friendlyNodeStatus)){
-        this.prevAiMoves.splice(index, 1);
-        this.prevAiMoves.push(peepIndex);
-        this.prevAiMoves.forEach(function(peep){
-          aiMoves.push(peep);
-        });
-      }
-      else{
-        console.error("ERROR: NOT DEVELOPED FOR EXPERIMENTAL AI YET!");
-      }
-    }
+    //Previous functionality - e.g. when adding 5 tokens at start
+
+    // if (!oneNodeOnly){
+    //   for(i=0 ; i < Server.MAX_TOKENS; i++){
+    //       var peepIndex = Math.floor(Math.random()*this.formattedPeeps.length);
+    //       aiMoves.push(peepIndex);
+    //       if(this.isServerPlayer(friendlyNodeStatus)){
+    //         this.prevAiMoves.push(peepIndex);
+    //       }
+    //   }
+    // }
+    // else{
+    //   var index = Math.floor(Math.random()*Server.MAX_TOKENS);
+    //   var peepIndex = Math.floor(Math.random()*this.formattedPeeps.length);
+    //   if(this.isServerPlayer(friendlyNodeStatus)){
+    //     this.prevAiMoves.splice(index, 1);
+    //     this.prevAiMoves.push(peepIndex);
+    //     this.prevAiMoves.forEach(function(peep){
+    //       aiMoves.push(peep);
+    //     });
+    //   }
+    //   else{
+    //     console.error("ERROR: NOT DEVELOPED FOR EXPERIMENTAL AI YET!");
+    //   }
+    //}
   }
 
 
 
   //Strategy to maximise score at some time-insensitive equilibrium
   GameState.prototype.aiTurnEquilibrium = function(aiMoves, oneNodeOnly, friendlyNodeStatus){
-    //adds one token when the token protocol is incremental
+    //Don't have any opponent moves to base own move off of, so plays randomly.
     if (this.roundNumber == 0){
       this.aiTurnRandom(aiMoves, oneNodeOnly, friendlyNodeStatus);
       return;
     }
+
+    //adds one token when the token protocol is incremental
     if(Server.TokenProtocol == "Incremental"){
       var friendlyMoves;
-      var enemyMoves; //TODO: Is this actually a vector?
+      var enemyMoves;
 
-      if(this.isServerPlayer(friendlyNodeStatus)){
+      if(this.isServerPlayer(friendlyNodeStatus)){ //Determines which moves are the current players'
         friendlyMoves = this.playerTwoMoves; //We want to find the best value for this, as we are playing as the AI here.
         enemyMoves = this.playerOneMoves;
       }
       else{
-        friendlyMoves = this.playerOneMoves; //TODO: Check we're getting an appropriate amount of info here. Does the server AI get the experiment AI's latest move? It shouldnt
+        friendlyMoves = this.playerOneMoves; 
         enemyMoves = this.playerTwoMoves;
       }
 
+      //As moves are stored as a list, we initiallise vectors with zeroes.
       var friendlyMovesVector = [];
       var enemyMovesVector = [];
       for (var i = 0; i < Server.NumberOfNodes; i++){
@@ -837,19 +850,22 @@ class GameState {
       var laplacian = clone(laplaciansList[this.laplacianID]);
 
       for (var i=0; i < friendlyMoves.length; i++){
+        //NB: Player/AI represent perspective of who is running this code - both could be AI.
         laplacian[friendlyMoves[i]][friendlyMoves[i]]++; //adds p_b for the AI player's ith token
         laplacian[enemyMoves[i]][enemyMoves[i]]++; //p_a for player's ith token
-        friendlyMovesVector[friendlyMoves[i]]++; //Also creates the vector of ai moves at the same time
+        friendlyMovesVector[friendlyMoves[i]]++; //Also updates the vector of ai moves at the same time
         enemyMovesVector[enemyMoves[i]]++;
-        //This is required as friendlyMoves is length n-1, where n is the round number. We need length 20 for matrix.
       }
 
       var maxScore = 0;
       var bestNode = -1;
-
+      //Loops through all nodes to find the node that will provide best improvement based on the equilibrium strategy
       for (var i=0; i < Server.NumberOfNodes; i++){
+        //Creates vector of probabilities that each node will be owned by the agent running this code.
         var probabilitiesVector = this.createProbabilitiesVector(laplacian, friendlyMovesVector, i);
+        //Sums these probabilities to get a fitness (i.e. maximise score)
         var selectionFitness = this.calculateFitness(probabilitiesVector);
+        //Records best node & its score
         if (selectionFitness > maxScore){
           maxScore = selectionFitness;
           bestNode = i;
@@ -858,6 +874,7 @@ class GameState {
       this.createProbabilitiesVector(laplacian, friendlyMovesVector, bestNode);
       var peepIndex = bestNode;
 
+      //As before, performs necessary logic to add the best token to the current agent's moveset.
       if(this.isServerPlayer(friendlyNodeStatus)){
         this.prevAiMoves.push(peepIndex);
         this.prevAiMoves.forEach(function(move){
@@ -874,12 +891,13 @@ class GameState {
     }
   }
 
+  //Creates vector of probabilities that each node will be owned by the agent running this code.
   GameState.prototype.createProbabilitiesVector = function(laplacian, friendlyMovesVector, i){
     laplacian[i][i]++;
     friendlyMovesVector[i]++; //adds the token to test to the node. This affects both L and p_b (ai moves)
 
-    var invLaplacian = extMath.inv(laplacian);
-    var probVector = extMath.multiply(friendlyMovesVector, invLaplacian);
+    var invLaplacian = extMath.inv(laplacian); //Inverts the matrix
+    var probVector = extMath.multiply(friendlyMovesVector, invLaplacian); //Multiplies p_b by inverted L
 
     laplacian[i][i]--;
     friendlyMovesVector[i]--; //reverts the change to this var to avoid an expensive clone operation
@@ -887,12 +905,14 @@ class GameState {
 
   }
 
+  //Determines how good the probability vector is
   GameState.prototype.calculateFitness = function(probabilitiesVector){
     return extMath.sum(probabilitiesVector); //adds all values in the array
   }
 
+  //Old test method - I kept it in to see how you could go about testing things, but it's mostly overtaken by ExperimentalAi.js
+  //This examines the impact of different exponent strength (how much the AI prefers to add to high/low degree nodes) and existing token bias
   GameState.prototype.aiTurnDegreeSensitiveTest = function(aiMoves, oneNodeOnly, lowDegreeSensitivity, friendlyNodeStatus){
-    console.error("ERROR! Don't use this until verified correct!");
     return;
     var monteOrig = [];
     for (var i=0; i < Server.NumberOfNodes; i++){
@@ -900,10 +920,13 @@ class GameState {
     }
 
     for (var i=0; i < 6; i++){
+      //Tests with various exponent strengths
       ExponentStrength = 0.25 + i*0.05;
       for (var j=0; j < 5; j++){
+        //Tests with various existing token biases (i.e. if already tokens here, less likely to add more)
         Server.ExistingTokensBias = 0 - 0.5*j;
         var monte = clone(monteOrig);
+        //Does many iterations for accuracy
         for (var iter=0; iter < 10000; iter++){
           this.prevAiMoves = [];
           for (var round=0; round < 10; round++){
@@ -918,10 +941,15 @@ class GameState {
     }
   }
 
+  //Adds tokens based on the degrees of each node.
   GameState.prototype.aiTurnDegreeSensitive = function(aiMoves, oneNodeOnly, lowDegreeSensitivity, friendlyNodeStatus, monte){
     if(Server.TokenProtocol == "Incremental"){
       var nodeWeights = [];
+      //I repurpose the laplacian here - taking the diagonal just gives me the degrees of each node!
       var laplacian = clone(laplaciansList[this.laplacianID]);
+
+      //Represents existing tokens as extra/fewer degrees on the node depending on the effect you want extra tokens to have.
+      //NOTE: We decided that this makes analysing games too difficult, so you can ignore this block.
       if (Server.ExistingTokensBias != 0){
         if(this.isServerPlayer(friendlyNodeStatus)){
           for(var i=0; i < this.prevAiMoves.length; i++){//Is agnostic of opponent's moves
@@ -937,24 +965,29 @@ class GameState {
         }
       }
       for (var i=0; i < Server.NumberOfNodes; i++){
-        var nodeDegree = laplacian[i][i];
+        var nodeDegree = laplacian[i][i]; //Gets the node degree from the laplacian diagonal
 
-        if(lowDegreeSensitivity){
+        //Assigns a weight (i.e. relative likelihood of being chosen) to the node depending on # degrees and high/low preference
+        if(lowDegreeSensitivity){ 
           var nodeWeight = extMath.exp(ExponentStrength*nodeDegree*-1); //negative exponent weights high degree nodes lower
         }
         else{
-          var nodeWeight = extMath.exp(ExponentStrength*nodeDegree);
+          var nodeWeight = extMath.exp(ExponentStrength*nodeDegree); //e^(strength*degree)
         }
         nodeWeights.push(nodeWeight);
       }
-      var max = extMath.sum(nodeWeights);
+      var max = extMath.sum(nodeWeights); //Gets the sum of all the weights to facilitate the choice below.
 
-      //nodeWeights[i] = nodeWeights[i] * 100 / max; //normalises the list, becomes % chance to pick
+      //nodeWeights[i] = nodeWeights[i] * 100 / max; //normalises the list, becomes % chance to pick. Use this for debugging if you want.
 
-      // for (var i=0; i < 10000; i++){
+      // for (var i=0; i < 10000; i++){ //Old testing code - useful for debugging.
       //     monte[this.chooseFromDistribution(nodeWeights, 100)]++;
       // }
+
+      //Samples a node from the weighting distribution
       var peepIndex = this.chooseFromDistribution(nodeWeights, max);
+
+      //As always, assigns the node to the player's moveset.
       if(this.isServerPlayer(friendlyNodeStatus)){
         this.prevAiMoves.push(peepIndex);
         this.prevAiMoves.forEach(function(move){
@@ -975,6 +1008,9 @@ class GameState {
     }
   }
 
+  //Samples a node based on the distribution of weights.
+  //The weights are summed to give a maxValue, and starting from node 0, we check if the random value is 
+  //part of each bucket (representing each node's weighting)
   GameState.prototype.chooseFromDistribution = function(distribution, maxValue){
     var rand = Math.random() * maxValue;
     for (var i=0; i<distribution.length; i++){
@@ -986,26 +1022,29 @@ class GameState {
     console.error("ERROR CHOOSING FROM DISTRIBUTION!");
   }
 
+  //AI strategy that begins random, then does whatever the opponent did last.
   GameState.prototype.aiTurnMirror = function(aiMoves, oneNodeOnly, friendlyNodeStatus){
+
+    //Places token randomly as don't have any data on the opponent to copy
     if (this.roundNumber == 0){
       this.aiTurnRandom(aiMoves, oneNodeOnly, friendlyNodeStatus);
       return;
     }
     var peepIndex = -1;
     if(this.isServerPlayer(friendlyNodeStatus)){
-      peepIndex = this.playerOneMoves[this.playerOneMoves.length-1];
-      this.prevAiMoves.push(peepIndex);
+      peepIndex = this.playerOneMoves[this.playerOneMoves.length-1]; //Gets opponent's last move
+      this.prevAiMoves.push(peepIndex);//And adds it to our moveset
       this.prevAiMoves.forEach(function(move){
         aiMoves.push(move);
       });
     }
     else{
-      peepIndex = this.playerTwoMoves[this.playerTwoMoves.length-1];
+      peepIndex = this.playerTwoMoves[this.playerTwoMoves.length-1]; //Same as above but for when AI is representing the player
       aiMoves.push(peepIndex);
     }
   }
 
-
+  //Performs moves based on the predetermined moves at the top of this class.
   GameState.prototype.aiTurnPredetermined = function(aiMoves, oneNodeOnly){
     var peepIndex = this.predeterminedAIMoves[this.roundNumber];
     this.prevAiMoves.push(peepIndex);
@@ -1017,6 +1056,10 @@ class GameState {
     return;
   }
 
+  //Wrapper for the calls to random, so we can see how many times it's called.
+  //This is useful for when we're using random seeds, so we can see if we can determine what number is generated when
+  //We have a separate one for strategy and threshold, as different strategies use different numbers of random calls
+  //Therefore we can always maintain a predictable set of thresholds even if strategies make different # random calls
   GameState.prototype.randStrategy = function(){
     this.rngStratCount++;
     return this.rngStrategy();
@@ -1027,6 +1070,7 @@ class GameState {
     return this.rngThreshold();
   }
 
+  //Adds a second human player to the game //TODO CONTINUE COMMENTING HERE***********************************************************************
   GameState.prototype.addPlayerTwo = function(ws){
     this.PLAYER_TWO_AI = false;
     this.playerTwo = ws;
