@@ -9,6 +9,7 @@ Server.TestMoves = [//[ 13, 2, 6, 14, 9, 10, 16, 15, 8, 18 ],
 [ 7, 12, 9, 13, 13, 1, 4, 19, 10, 19 ],
 [ 19, 14, 7, 11, 18, 9, 7, 5, 13, 1]];
 Server.playerTopologies = [];
+Server.LastRoundBonus = 5;
 ExponentStrength = 50; //Higher = more bias to high/low degree nodes in their respective strategies
 Server.ExistingTokensBias = 0; //Increases likelihood of placing tokens on nodes that already have tokens. Negative reduces the likelihood.
 //Only affects degree sensitive strategies. We decided to make this 0 to simplify analysis.
@@ -194,7 +195,7 @@ function Server(){
   Server.RoundLimit = 10;
   Server.AiMode = true; //Always sets player 2 to AI
   Server.InfectionMode = "wowee"; //"majority" to only infect if >50% sources infected, or anything else for voter model.
-  Server.AiStrategy = "DSHigh";// See 'aiTurn' method for each string
+  Server.AiStrategy = "GreedyPredictsGreedy";// See 'aiTurn' method for each string
   Server.TokenProtocol = "Incremental"; //"AtStart" to get all tokens at start or "Incremental" for one per round
   Server.AiWaiting = false; //Implements a fake waiting to convince players they are playing against a human
   Server.lastAlertTime = 0; //Records time since last email alert to prevent spam
@@ -564,8 +565,8 @@ class GameState {
 
     //Applies 5x bonus to the final round
     if(this.roundNumber == 10){
-      p1additionalScore = p1additionalScore * 10;
-      p2additionalScore = p2additionalScore * 10;
+      p1additionalScore = p1additionalScore * Server.LastRoundBonus;
+      p2additionalScore = p2additionalScore * Server.LastRoundBonus;
     }
 
     this.playerOneScore += p1additionalScore;

@@ -6,7 +6,7 @@ var game;
 var moves = [];
 var experimentsList = [];
 var gamesRemaining = 0;
-var gamesPerExperiment = 10000;
+var gamesPerExperiment = 5000;
 
 var cumScoreServer = 0;
 var cumFinalPercentageServer = 0;
@@ -16,11 +16,15 @@ var winsServer = 0;
 var winsExperiment = 0;
 var resultsList = [];
 
-EXPERIMENT_MODE = "NoReflexive";//"DegreesTest"//"DegreesTest";//"ChiTest"
+EXPERIMENT_MODE = "ChiTest";//"NoReflexive";//"DegreesTest"//"DegreesTest";//"ChiTest"
+//DegreesTest sees how different exponent strengths affect High/Low degree strategies
+//ChiTest performs chisquared testing, only does strategies against themselves
+//NoReflexive puts all strategies against each other, but doesn't pit strategies against themselves
 Server.LocalMode = true;
+Server.LastRoundBonus = 5; //TODO: Make this auto update with Server.js
 
 
-var strategyNames=["GreedyPredictsHigh", "DSHigh", "SimpleGreedy"]; //["Random","DSHigh","DSLow","SimpleGreedy","Equilibrium", "Mirror"];
+var strategyNames=["GreedyPredictsHigh", "DSHigh", "SimpleGreedy", "GreedyPredictsGreedy"]; //["Random","DSHigh","DSLow","SimpleGreedy","Equilibrium", "Mirror"];
 //var strategyNames=["SimpleGreedy"];
 
 
@@ -132,12 +136,12 @@ function gameStart(){
         resultsWrapper.push(winsExperiment);
         var avgPercentInfectedExperiment = calculateAveragePercantageInfected(cumScoreExperiment);
         resultsWrapper.push(avgPercentInfectedExperiment);
-        resultsWrapper.push(Math.round(cumFinalPercentageExperiment*100/gamesPerExperiment) / 100);
+        resultsWrapper.push(Math.round(cumFinalPercentageExperiment*100/gamesPerExperiment) / 500);
         resultsWrapper.push(ctx.AiStrategy);
         resultsWrapper.push(winsServer);
         var avgPercentInfectedServer = calculateAveragePercantageInfected(cumScoreServer);
         resultsWrapper.push(avgPercentInfectedServer);
-        resultsWrapper.push(Math.round(cumFinalPercentageServer*100/gamesPerExperiment) / 100);
+        resultsWrapper.push(Math.round(cumFinalPercentageServer*100/gamesPerExperiment) / 500);
 
         resultsList.push(resultsWrapper);
         console.log("F "+ExponentStrength);
@@ -148,7 +152,7 @@ function gameStart(){
 
 function calculateAveragePercantageInfected(cumScore){
     var avgScore = cumScore/gamesPerExperiment;
-    var avgPercentInfected = avgScore / 20; //20 because over 10 rounds, and a score of 200 maps to 100% for each round. E.g. score of 40 means 20% infected that round.
+    var avgPercentInfected = avgScore / (18 + 2*Server.LastRoundBonus); //20 because over 10 rounds, and a score of 200 maps to 100% for each round. E.g. score of 40 means 20% infected that round.
     return Math.round(avgPercentInfected)/100; //to be from 0-1
 }
 
@@ -190,7 +194,7 @@ function gameOver(payload){//Mostly just for logging final results from this AI'
 
 function calculateFinalPercentageInfected(scoresList){
     var lastRoundAdditionalScore= scoresList[9] - scoresList[8];
-    var finalRoundPercentage = lastRoundAdditionalScore / 2; //As above, score of 200 maps to 100%, so N maps to N/2%
+    var finalRoundPercentage = lastRoundAdditionalScore / 2*Server.LastRoundBonus; //As above, score of 200 maps to 100%, so N maps to N/2%
     return finalRoundPercentage/100;//As above, to be 0-1.
 }
 

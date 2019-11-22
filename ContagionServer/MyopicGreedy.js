@@ -10,30 +10,37 @@ function aiTurnSimpleGreedy(aiMoves, removeOld, context, friendlyNodeStatus, ant
     var myMoves = ctx.playerOneMoves;
     var enemyMoves = ctx.prevAiMoves;
   }
+
+
   if(anticipating.length > 0){
-    if(anticipating == "High"){
-      if(ctx.roundNumber == 0){
-        anticipating = "";
-      }
-      else{
+    if(ctx.roundNumber == 0){
+      anticipating = "";
+    }
+    else{
+      if(anticipating == "High"){
         var highestDegree = getHighestDegreeNode(laplacian);
         enemyMoves.push(highestDegree);
       }
-    }
-    else if (anticipating == "Greedy"){
-      console.log("Not implemented yet!");
+      else if (anticipating == "Greedy"){
+        //1-nodestatus, enemyMoves isntead of mymoves to do it from enemy POV.
+        var tokenInfluences = createTokenInfluencesList(1-friendlyNodeStatus, enemyMoves, myMoves);
+        var greedyNode = greedyNodeSelection(1-friendlyNodeStatus, tokenInfluences, aiMoves, true, enemyMoves, true);
+        enemyMoves.push(greedyNode);
+      }
     }
   }
+
   //We know at the point one player is AI, this retrieves their previous moves.
   //array of [AI(friendly from this POV), Player(enemy)] moves
 
   var tokenInfluences = createTokenInfluencesList(friendlyNodeStatus, myMoves, enemyMoves);
 
+
   if(removeOld){
-    greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, true, myMoves); //true to remove worst
+    greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, true, myMoves, false); //true to remove worst. False at end to add the selection to the list
   }
   else{
-    greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, false, myMoves); //false to just add best
+    greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, false, myMoves, false); //false to just add best
   }
   if(anticipating.length > 0){
     enemyMoves.pop();
@@ -41,7 +48,8 @@ function aiTurnSimpleGreedy(aiMoves, removeOld, context, friendlyNodeStatus, ant
 } 
 
 //returns the id of the best node by fitness, using a greedy strategy
-function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findWorst, myMoves){
+//dontAdd lets us run a dummy version to see what an opponent would choose without affecting the players' moves.
+function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findWorst, myMoves, dontAdd){
   var bestNodesID = [-1];
   var bestNodeValue = -1;
 
@@ -75,7 +83,9 @@ function greedyNodeSelection(friendlyNodeStatus, tokenInfluences, aiMoves, findW
 
   //picks a random node from those with equal fitness
   var index = bestNodesID[Math.floor(Math.random() * bestNodesID.length)];
-
+  if(dontAdd){
+    return index;
+  }
   if(ctx.isServerPlayer(friendlyNodeStatus)){
     ctx.prevAiMoves.push(index);
     ctx.prevAiMoves.forEach(function(peep){
