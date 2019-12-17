@@ -1,3 +1,5 @@
+//NOTE: A lot of the human vs human player code is no longer bug-free due to changes in specification. It will work with some moderate changes but NOT as-is.
+
 Server.LocalMode = true; //Run on local machine or internet-facing
 Server.NeutralMode = true; //Supports neutral nodes (this is the default now)
 Server.TrialMode = false; //Running controlled trials with people
@@ -583,6 +585,7 @@ class GameState {
   GameState.prototype.updateClients = function(){
     var peepsToSend = [];
     var movesToSend = [];
+
     if (this.playerOne !== "AI" && this.playerOne !== null){
 
       this.formattedPeeps.forEach(function(peep){
@@ -595,6 +598,7 @@ class GameState {
       var payload = [peepsToSend, movesToSend, this.playerOneScore];
       Server.sendClientMessage(new Message(payload, "UPDATE_STATE_TOKEN"), this.playerOne);
     }
+
     if (this.playerTwo !== "AI" && this.playerTwo !== null){
       //Clears these so we can populate them with the game state from player 2's perspective
       peepsToSend = [];
@@ -1071,7 +1075,7 @@ class GameState {
     return this.rngThreshold();
   }
 
-  //Adds a second human player to the game //TODO CONTINUE COMMENTING HERE***********************************************************************
+  //Adds a second human player to the game 
   GameState.prototype.addPlayerTwo = function(ws){
     this.PLAYER_TWO_AI = false;
     this.playerTwo = ws;
@@ -1082,15 +1086,19 @@ class GameState {
     this.updateGameDatabaseEntry();
   }
 
+  //Similar to above, but for adding AIs (e.g. when we want PvAI, or a player 2 hasn't arrived in time)
   GameState.prototype.addPlayerTwoAI = function(){
     this.aiCheckTimer = null;
     this.playerTwo = "AI";
     this.playerTwoScore = 0;
   }
 
+  //When a player doesn't submit a move in time
   GameState.prototype.outOfTime = function(isPlayerOne){
+    //Prevents this from happening during demos
     if(!Server.demoMode){
       console.info("!!!!OUTTATIME: "+isPlayerOne);
+      //Sends time up to losing player, 'other player disconnected' to winning player
       if (isPlayerOne){
         Server.sendResults(1, game, "time");
         Server.sendResults(2, game, "disconnect");
@@ -1105,24 +1113,26 @@ class GameState {
 
 //########################################################################################END GAMESTATE
 
-/*Server should store main sim stuff for security and data saving, so:
-Peeps: Infected, Location(x,y), playerOrbits, aiOrbits maybe ID? Possibly not though. Percentages - If we're showing the user..?
-
-Should be able to RECREATE game state with as few vars as possible
-*/
+//When a player sends clicks, moves or heartbeats to the server, we find the game and make sure it's still alive
 Server.validateGame = function(ws){
+
+  //Finds the game the current websocket belongs to
   let game = Server.CurrentGames.filter(gameState => {
     return (gameState.playerOne == ws || gameState.playerTwo == ws);
   });
+
+  //If for some reason it is in multiple games, we throw an error (for debugging, this shouldn't happen)
   if (game.length > 1){
     console.err("ERR: USER IS IN MUPLTIPLE GAMES.");
     return null;
   }
+
+  //If user is in no games, doesn't return any game. Logging this will likely clog the log feed due to heartbeats on the main menu
   if (game.length < 1){
     return null;
   }
 
-  game = game[0];
+  game = game[0]; //Converts the single-element list to element
   if (game.roundNumber > 10){
     console.err("ERR: User submit moves but game already over.");
   }
@@ -1130,14 +1140,21 @@ Server.validateGame = function(ws){
   else return game;
 }
 
+//Receives & stores the players' moves
 Server.submitMoves = function(message, ws){
+  
+  //Retrieves game
   game = Server.validateGame(ws);
   if (game == null){
     return;
   }
+
+  //Validates no. tokens
   if(Server.TokenProtocol == "Incremental" && message.length != game.roundNumber+1){
     console.error("ERR ERR WRONG NO OF TOKENS!"+message.length+ " "+game.roundNumber);
   }
+  
+  //Assigns the moves to the appropriate player
   if (game.playerOne === ws){
     game.addPlayerOneMoves(message);
   }
@@ -1146,17 +1163,24 @@ Server.submitMoves = function(message, ws){
   }
 }
 
+//Creates a config for the next game
+//perm = list of players' layout permutations, stored in their websocket. Only for ai vs player
 Server.getConfig = function(twoPlayerMode, perm){
+  //If not ai vs player OR player doesn't have a permutation list for whatever reason
   if (perm == undefined){
     //picks a topology at random
-      var topologyID = Server.CurrentTopologyIndex;
-      Server.CurrentTopologyIndex = (Server.CurrentTopologyIndex + 1) % serverConfigs.length;
+    var topologyID = Server.CurrentTopologyIndex;
+    //Lets the server choose the next topology in the looping list next time
+    Server.CurrentTopologyIndex = (Server.CurrentTopologyIndex + 1) % serverConfigs.length;
     //P1 Topology
     var layoutID = Server.CurrentTopologyLayoutIndexes[topologyID];
+    //Also chooses the next layout of that particular topology's looping list next time
     Server.CurrentTopologyLayoutIndexes[topologyID] = (Server.CurrentTopologyLayoutIndexes[topologyID] + 1) % serverConfigs[topologyID].length;
     var p2LayoutID = Server.CurrentTopologyLayoutIndexes[topologyID];
   }
   else{
+    //Gets the topology & layout from the perm value
+    //NOTE: NPerm changes one layer above this in the newgame method
     var mixedTopologyID = perm[0];
     var topologyID = Math.floor(mixedTopologyID / serverConfigs.length);
     var layoutID = mixedTopologyID % serverConfigs.length;
@@ -1168,6 +1192,7 @@ Server.getConfig = function(twoPlayerMode, perm){
   }
   var config = {
     type:"sim",
+    //The sim object covers the whole screen, so we start at [0,0]
     x: 0,
     y: 0,
     fullscreen: true,
@@ -1175,26 +1200,31 @@ Server.getConfig = function(twoPlayerMode, perm){
     playerTwoNetwork: clone(serverConfigs[topologyID][p2LayoutID]),
     playerOneLayoutID: serverConfigs[topologyID][layoutID].uniqueLayoutID,
     playerTwoLayoutID: serverConfigs[topologyID][p2LayoutID].uniqueLayoutID,
+    //Stores laplacian ID for easy retrieval in the AI strategies that use it
     laplacianID:serverConfigs[topologyID][layoutID].laplacianID,
     tokenProtocol: Server.TokenProtocol
   }
   return config;
 }
 
+//Boilerplate websocket code. Not much to change here.
 wss.on('connection', ((ws) => {
+  //Adds unique ID to the websocket so we can uniquely ID players. NOT the same as the one they enter at the beginning.
   ws.id = uuidv4();
   console.info("new connection"+ws.id);
   ws.on('message', (message) => {
+      //Parses messages received from the client
       Server.ParseMessage(message, ws);
   });
   ws.on('end', () => {
   });
   ws.send('Successful Connection to Server');
-  //need to store this ws now...
 }));
 
+//Sends messages to the client. But you already knew that.
 Server.sendClientMessage = function(message, ws){
   try{
+    //Needs to be in JSON format to send
     ws.send(JSON.stringify(message));
   }
   catch(err){
@@ -1203,52 +1233,64 @@ Server.sendClientMessage = function(message, ws){
   }
 }
 
+//Adds a new player's username to the system when starting a game + gives them a layout permutation set
+//Or takes the next permutation if they already exist
 Server.processUsername = function(username, ws){
   var complete = false;
+  //If client doesn't submit a username at all
   if (username == undefined){
-    console.error("fuc1");
+    console.error("bad1");
     username = uuidv4();
   }
+  //Edge case for above
   if (username == null){
-    console.error("fuc2");
+    console.error("bad2");
     username = uuidv4();
   }
+  //Another edge case (empty name string)
   if (!username.length > 0){
-    console.error("fuc3");
+    console.error("bad3");
     username = uuidv4();
   }
+
+  //Player already exists, so we take their next layout permutation
   var found = Server.playerTopologies.find(function(item){
     if (item[0] == username){
       ws.permutation = item[1];
       complete = true;
     }
   });
+
+  //Valid username but can't find player - we make them a new permutation list
   if (complete == false){
     var perm = Server.generatePerm();
     ws.permutation = perm;
     Server.playerTopologies.push([username, perm]);
   }
-  // for (int i=0; i<Server.playerTopologies.length){
-  //   if(Server.playerTopologies)
-  // }
-  // if(!usernameExists(username)){
 
 }
 
+//Creates a new game when a player requests one
 Server.newGame = function(username, ws){
   Server.processUsername(username, ws);
-  ws.id = username; //just in case of collisions. Substring as database can only hold strings of certain length
+  ws.id = username; //allows for easier tracking in the database
   if (ws.id.length > 36){
-    ws.id = ws.id.substring(0,36); //prevent too long usernames from making the db fail to record games. Should be fine if we stick to uuid
+    ws.id = ws.id.substring(0,36); //prevent too long usernames from making the db fail to record games
   }
+
+  //Gets number of games user is currently in
   let gameTest = Server.CurrentGames.filter(gameState => {
     return (gameState.playerOne == ws || gameState.playerTwo == ws);
   });
+
+  //If we've found at least one game
   if (gameTest.length != 0){
 
     if(gameTest.length > 1){
+      //Emails admins about critical failure (user in many games at once)
       Server.sendMail("User in many games at once!!");
     }
+    //Kills off a still-running game with this player in (maybe they refreshed mid-game)
     if(gameTest[0].playerOne == ws){
       gameTest[0].killGame(false, gameTest, "p1");
     }
@@ -1258,11 +1300,14 @@ Server.newGame = function(username, ws){
     return;
   }
   //If nobody's waiting for a player 2
-  if (Server.AiMode || Server.WaitingGameConfig == null){// || Server.CurrentGames.length == 0){ pretty sure commented out code is wrong! Will break when 2 human games occur
+  if (Server.AiMode || Server.WaitingGameConfig == null){
+
+    //If expecting a P2 later, sets up config to be sent to P2 when they arrive
     if (!Server.AiMode){
       var config = Server.getConfig(true);
       Server.WaitingGameConfig = config;
     }
+    //Not expecting a human P2 so gets the config right away (true vs false parameter in getConfig)
     else{
       try{
         var config = Server.getConfig(false, ws.permutation); //Don't need to retain the config for the next player if its vs the AI.
@@ -1271,18 +1316,23 @@ Server.newGame = function(username, ws){
         console.error("TRIGGERED FAILSAFE WITH GETTING CONFIG!");
         config = Server.getConfig(false);
       }
-      ws.permutation.push(ws.permutation.shift());
+      ws.permutation.push(ws.permutation.shift()); //Shifts the permutation list so the next layout will be picked next time
     }
+
     var game = new GameState(config.network.peeps, config.network.connections, config.playerOneLayoutID, config.playerTwoLayoutID, config.laplacianID, ws);
-    //console.log("Laplaciantest:"+config.laplacianID); TODO: This had strange value before, pls check
+    
+    //Adds game to the server's list
     Server.CurrentGames.push(game);
     if(Server.AiMode){
       game.addPlayerTwoAI();
     }
     game.gameStartTime = Date.now();
     game.addGameToDatabase();
+
+    //Sets limit of 1 token per round if doing an incremental strategy
     config.maxConnections = (Server.TokenProtocol == "Incremental") ? 1 : Server.MAX_TOKENS;
     config.gameID = game.gameID;
+    //Removes unneccessary player 2 information from the config
     delete config.playerTwoNetwork;
     delete config.playerTwoLayoutID;
     delete config.playerOneLayoutID; //Don't want to give player any idea of if they're player 1 or 2
@@ -1290,16 +1340,19 @@ Server.newGame = function(username, ws){
     Server.startTimer(game, 0, 61, true);
 
   }
+
   //Matches a player when somebody is waiting
   else{
-    var config = Server.getConfig(false); //false means we don't use this same config next time //clone(Server.WaitingGameConfig); THIS WAS THE PREVIOUS SETTING!
-    Server.WaitingGameConfig = null;
+    var config = Server.getConfig(false); //false means we don't use this same config next time
+    Server.WaitingGameConfig = null; //TODO: Nowhere are we actually using this value. Interesting we're not using it here. But the game works?
     config.network.peeps.forEach(function(peep){
       //reverses the infected state for P2
       if(peep[2] != -1){
         peep[2] = 1 - peep[2];
       }
     });
+
+    //Similar code to above
     var game = Server.CurrentGames[Server.CurrentGames.length-1];
     game.addPlayerTwo(ws);
     game.playerTwoTimeOffset = Date.now() - game.gameStartTime;
@@ -1312,6 +1365,7 @@ Server.newGame = function(username, ws){
   }
 }
 
+//When game ends, send win/lose/draw messages to all players
 Server.sendResults = function(playerNo, game, result){
   try{
     if (playerNo == 1){
@@ -1331,17 +1385,21 @@ Server.sendResults = function(playerNo, game, result){
   }
 }
 
+//Starts timers for waiting for player 2 to join or either players' moves.
 Server.startTimer = function(game, status, duration, isPlayerOne){
+
+  //Don't need this for experiments as it's Ai vs Ai
   if(Server.ExperimentMode){
     return;
   }
   //status - 0 is regular round message, 1 is waiting for P2
-  //*1000 so we only need to pass the number of seconds in
-  //WARN: This assumes that AI is always P2 (and experimental AI is P1)
+  //Time is *1000 so we only need to pass the number of seconds in
+  //WARN: This assumes that AI is always P2
   if (isPlayerOne){
     if(!game.playerOne.id.startsWith("Exp_AI_")){ //doesn't set timers for the experiments. They shouldn't be an issue, but just in case!
       game.playerOneTimer = setTimeout((isPlayerOne) => {game.outOfTime(isPlayerOne);}, duration*1000, isPlayerOne);
     }
+    //Duration -1 to give them a bit of berth if it's down to the wire
     Server.sendClientMessage(new Message([0, duration-1], "TIMER_TOKEN"), game.playerOne);
   }
   else{
@@ -1364,6 +1422,7 @@ Server.registerHeartbeat = function(ws){
   }
 }
 
+//Stores players' clicks in the database
 Server.registerClick = function(payload, ws){
   game = Server.validateGame(ws);
   if (game == null){
@@ -1377,11 +1436,14 @@ Server.registerClick = function(payload, ws){
     playerID = 2;
   }
   try{
+  //2 values for node ID and Left/Right click
   var nodeID = payload[0];
   var action = payload[1];
   game.registerClick(playerID, nodeID, action);
   }
-  catch(err){} //NYCON why does this fail on AI?
+  catch(err){
+    console.error("Error handling clicks");
+  } //NYCON why does this fail on AI? UPDATE: does this still fail?
 }
 
 //Handles messages from the client
@@ -1402,7 +1464,7 @@ Server.ParseMessage = function(message, ws){
       if(message.payload.length > 0){
         Server.newGame(message.payload, ws);
       }
-      else{ console.error("Somebody's fucked it!");
+      else{ console.error("Error making new game!");
           Server.newGame(Math.random()*10000, ws);
       }
       break;
